@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+sync_inventory_from_provider() {
+  case "${VAGRANT_DEFAULT_PROVIDER:-virtualbox}" in
+    libvirt|kvm)
+      export VAGRANT_DEFAULT_PROVIDER="libvirt"
+      export MOLECULE_VAGRANT_INVENTORY="${MOLECULE_VAGRANT_INVENTORY:-vagrant_libvirt.yml}"
+      ;;
+    *)
+      export VAGRANT_DEFAULT_PROVIDER="virtualbox"
+      export MOLECULE_VAGRANT_INVENTORY="${MOLECULE_VAGRANT_INVENTORY:-vagrant.yml}"
+      ;;
+  esac
+}
+
+if [ "$#" -gt 0 ]; then
+  sync_inventory_from_provider
+  cd "$repo_root"
+  exec molecule "$@"
+fi
+
+cat <<'PROMPT'
+Molecule + Vagrant - pick a provider:
+  1) VirtualBox  (inventory/vagrant.yml, 192.168.56.x)
+  2) libvirt/KVM (inventory/vagrant_libvirt.yml, 192.168.121.x)
+PROMPT
+
+read -r -p "Provider [1]: " choice
+case "${choice:-1}" in
+  2)
+    provider="libvirt"
+    inventory="vagrant_libvirt.yml"
+    ;;
+  *)
+    provider="virtualbox"
+    inventory="vagrant.yml"
+    ;;
+esac
+
+cat <<EOF
+
+Environment:
+  export VAGRANT_DEFAULT_PROVIDER=$provider
+  export MOLECULE_VAGRANT_INVENTORY=$inventory
+
+Run:
+  cd "$repo_root" && ./scripts/molecule-vagrant test
+EOF
+
+read -r -p "Run molecule test now? [y/N] " run_now
+case "$run_now" in
+  y|Y|yes|YES)
+    export VAGRANT_DEFAULT_PROVIDER="$provider"
+    export MOLECULE_VAGRANT_INVENTORY="$inventory"
+    cd "$repo_root"
+    exec molecule test
+    ;;
+esac

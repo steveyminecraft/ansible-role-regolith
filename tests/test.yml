@@ -1,5 +1,6 @@
 ---
-- hosts: localhost
+- name: Test Regolith role
+  hosts: localhost
   remote_user: root
   roles:
-    - regolith
+    - role: "{{ playbook_dir }}/.."
