@@ -1,20 +1,26 @@
 ---
-name: Schedule - Renovate
+name: Renovate
 
 on:
   workflow_dispatch:
     inputs:
-      dryRun:
+      dry-run:
         description: "Dry-Run"
         default: false
         required: false
         type: boolean
-      logLevel:
+      log-level:
         description: "Log-Level"
-        default: "error"
+        default: info
         required: false
+        type: choice
+        options:
+          - debug
+          - info
+          - warn
+          - error
   schedule:
-    - cron: "0 * * * *"
+    - cron: "0 6 * * 1"
   push:
     branches:
       - main
@@ -22,13 +28,30 @@ on:
       - ".github/renovate.json5"
       - ".github/renovate/**.json"
       - ".github/renovate/**.json5"
-      - ".github/workflows/renovate.yaml"
+      - ".github/workflows/renovate.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: renovate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   renovate:
     name: Renovate
-    uses: kilip/gh-common/.github/workflows/run-renovate.yaml@main
-    with:
-      configurationFile: ".github/renovate.json5"
-      dryRun: "${{ inputs.dryRun || 'false' }}"
-      renovateLogLevel: "${{ inputs.logLevel || 'error' }}"
-    secrets: inherit
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Run Renovate
+        uses: renovatebot/github-action@v46.1.11
+        with:
+          configurationFile: .github/renovate.json5
+          token: ${{ secrets.RENOVATE_TOKEN }}
+        env:
+          LOG_LEVEL: ${{ inputs.log-level || 'info' }}
+          RENOVATE_DRY_RUN: ${{ inputs.dry-run || 'false' }}
+          RENOVATE_REPOSITORIES: ${{ github.repository }}

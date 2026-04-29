@@ -1,11 +1,17 @@
 ---
-# defaults file for regolith
-regolith_ubuntu_packages:
-  - regolith-desktop
-  - regolith-session-sway
-  - regolith-look-dracula
+regolith_repository_key_url: https://archive.regolith-desktop.com/regolith.key
+regolith_repository_keyring: /usr/share/keyrings/regolith-archive-keyring.gpg
+regolith_repository_base_url: https://archive.regolith-desktop.com
+regolith_repository_suite: stable
+regolith_repository_component: main
+regolith_repository_architecture: >-
+  {{ 'arm64' if ansible_architecture in ['aarch64', 'arm64'] else 'amd64' }}
 
-regolith_debian_packages:
+regolith_packages:
   - regolith-desktop
   - regolith-session-flashback
-  - regolith-look-dracula
+  - regolith-look-lascaille
+  - xdg-desktop-portal-regolith
+
+regolith_ubuntu_packages: "{{ regolith_packages }}"
+regolith_debian_packages: "{{ regolith_packages }}"

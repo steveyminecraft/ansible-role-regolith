@@ -1,8 +1,19 @@
 {
   extends: [
-    "github>kilip/renovate-config",
-    "github>kilip/renovate-config:automerge-github-actions",
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
   ],
-  "repositories": ["kilip/ansible-role-regolith"],
-  "baseBranches": ["main"]
+  baseBranches: ["main"],
+  labels: ["dependencies"],
+  packageRules: [
+    {
+      matchManagers: ["github-actions"],
+      groupName: "github-actions",
+    },
+    {
+      matchManagers: ["pip_requirements"],
+      groupName: "python test dependencies",
+    },
+  ],
 }

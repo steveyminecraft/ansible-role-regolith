@@ -1,17 +1,91 @@
 ---
-name: Testing
+name: Test
 
 on:  # yamllint disable-line rule:truthy
   pull_request:
   push:
-    branches: ["main"]
-
+    branches:
+      - main
   schedule:
     - cron: "0 16 * * *"
+  workflow_dispatch:
+    inputs:
+      run-vagrant:
+        description: "Run Molecule Vagrant scenario on a self-hosted runner"
+        default: false
+        required: false
+        type: boolean
+      vagrant-provider:
+        description: "Vagrant provider"
+        default: virtualbox
+        required: false
+        type: choice
+        options:
+          - virtualbox
+          - libvirt
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  testing:
-    uses: kilip/gh-common/.github/workflows/ansible-testing.yml@main
-    with:
-      dists: ubuntu-22.04, debian-12
-    secrets: inherit
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install test dependencies
+        run: python -m pip install -r requirements.txt yamllint
+
+      - name: Run ansible-lint
+        run: ansible-lint
+
+      - name: Run yamllint
+        run: yamllint .
+
+      - name: Run syntax check
+        run: ansible-playbook --syntax-check tests/test.yml
+
+  vagrant:
+    name: Molecule Vagrant (${{ inputs.vagrant-provider }})
+    if: github.event_name == 'workflow_dispatch' && inputs.run-vagrant
+    runs-on:
+      - self-hosted
+      - linux
+    needs: lint
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install test dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run Molecule Vagrant scenario
+        run: molecule test
+        env:
+          MOLECULE_VAGRANT_INVENTORY: >-
+            ${{ inputs.vagrant-provider == 'libvirt'
+                && 'vagrant_libvirt.yml'
+                || 'vagrant.yml' }}
+          VAGRANT_DEFAULT_PROVIDER: ${{ inputs.vagrant-provider }}

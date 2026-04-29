@@ -1,8 +1,33 @@
 ---
-- name: Verify
+- name: Verify Regolith installation
   hosts: all
-  gather_facts: false
+  gather_facts: true
   tasks:
-    - name: Example assertion
+    - name: Collect package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Ensure expected Regolith packages are installed
       ansible.builtin.assert:
-        that: true
+        that:
+          - item in ansible_facts.packages
+      loop:
+        - regolith-desktop
+        - regolith-session-flashback
+        - regolith-look-lascaille
+        - xdg-desktop-portal-regolith
+
+    - name: Check apt dependency health
+      ansible.builtin.command: apt-get check  # noqa command-instead-of-module
+      changed_when: false
+
+    - name: Find Regolith desktop session files
+      ansible.builtin.find:
+        paths: /usr/share/xsessions
+        patterns: "*regolith*.desktop"
+      register: regolith_xsessions
+
+    - name: Ensure Regolith desktop session is registered
+      ansible.builtin.assert:
+        that:
+          - regolith_xsessions.matched | int > 0

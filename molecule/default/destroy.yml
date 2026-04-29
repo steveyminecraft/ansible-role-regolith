@@ -1,0 +1,20 @@
+---
+- name: Destroy test platforms (Vagrant)
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars:
+    molecule_vagrant_user: >-
+      {{ lookup('ansible.builtin.env', 'SUDO_USER')
+         | default(lookup('ansible.builtin.env', 'USER'), true) }}
+  tasks:
+    - name: Destroy Vagrant environment for this scenario
+      ansible.builtin.command: "sudo -u {{ molecule_vagrant_user }} -H vagrant destroy -f"
+      args:
+        chdir: "{{ playbook_dir }}"
+      environment:
+        HOME: "/home/{{ molecule_vagrant_user }}"
+        PATH: "{{ lookup('ansible.builtin.env', 'PATH') }}"
+        VAGRANT_HOME: "/home/{{ molecule_vagrant_user }}/.vagrant.d"
+      changed_when: true
