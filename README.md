@@ -145,4 +145,4 @@ MIT
 Author Information
 ------------------
 
-This role was created in 2026 by [Richard Laing](mail@rlaing.net).
+This role is maintained by [steveyminecraft](https://github.com/steveyminecraft).

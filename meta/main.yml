@@ -1,10 +1,10 @@
 ---
 galaxy_info:
-  namespace: kilip
+  namespace: steveyminecraft
   role_name: regolith
-  author: Anthonius Munthi
+  author: steveyminecraft
   description: Ansible role regolith
-  issue_tracker_url: https://github.com/kilip/ansible-role-regolith/issues
+  issue_tracker_url: https://github.com/steveyminecraft/ansible-role-regolith/issues
 
   license: MIT
 

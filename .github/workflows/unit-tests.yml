@@ -75,4 +75,4 @@ jobs:
       - name: Validate role for Ansible Galaxy
         run: |
           cd ..
-          python -m galaxy_importer.main --legacy-role --namespace kilip "${GITHUB_REPOSITORY#*/}"
+          python -m galaxy_importer.main --legacy-role --namespace steveyminecraft "${GITHUB_REPOSITORY#*/}"
