@@ -22,6 +22,16 @@ galaxy_info:
         - bookworm
         - trixie
 
-  galaxy_tags: []
+  galaxy_tags:
+    - regolith
+    - desktop
+    - ubuntu
+    - debian
+    - linux
+    - apt
+    - i3
+    - workstation
+    - gui
+    - packages
 
 dependencies: []
