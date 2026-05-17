@@ -27,9 +27,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - image: python:3.12-bookworm
+          - image: python:3.13-bookworm
             label: Debian bookworm
-          - image: debian:trixie
+          - image: python:3.13-trixie
             label: Debian trixie
           - image: ubuntu:24.04
             label: Ubuntu 24.04 (noble)

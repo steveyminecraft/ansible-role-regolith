@@ -80,9 +80,9 @@ ansible-playbook molecule/unit-ubuntu-questing/converge.yml
 Integration tests (Docker container, same steps as CI):
 
 ```bash
-docker run --rm -it -v "$PWD:/work" -w /work python:3.12-bookworm bash -lc '
+docker run --rm -it -v "$PWD:/work" -w /work python:3.13-bookworm bash -lc '
   apt-get update && apt-get install -y python3-pip python3-apt gnupg ca-certificates
-  python3.12 -m pip install --break-system-packages -r requirements-ci.txt
+  python3.13 -m pip install --break-system-packages -r requirements-ci.txt
   export PATH="$HOME/.local/bin:$PATH"
   ansible-playbook -i localhost, -c local molecule/common/docker_prepare.yml
   ansible-playbook -i localhost, -c local molecule/common/converge.yml
