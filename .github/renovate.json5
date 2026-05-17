@@ -13,6 +13,7 @@
     },
     {
       matchManagers: ["pip_requirements"],
+      matchFileNames: ["requirements.txt", "requirements-ci.txt"],
       groupName: "python test dependencies",
     },
   ],

@@ -30,6 +30,9 @@ jobs:
       - name: Run pre-commit
         run: pre-commit run --all-files
 
+      - name: Syntax check role playbook
+        run: ansible-playbook --syntax-check tests/test.yml
+
   unit:
     name: Unit (${{ matrix.label }})
     runs-on: ubuntu-24.04
@@ -38,11 +41,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - scenario: unit
+          - playbook: molecule/unit/converge.yml
             label: all platforms
-          - scenario: unit-ubuntu-plucky
+          - playbook: molecule/unit-ubuntu-plucky/converge.yml
             label: Ubuntu 25.04
-          - scenario: unit-ubuntu-questing
+          - playbook: molecule/unit-ubuntu-questing/converge.yml
             label: Ubuntu 25.10
 
     steps:
@@ -52,8 +55,10 @@ jobs:
       - name: Setup Ansible test environment
         uses: ./.github/actions/setup-ansible-test
 
-      - name: Run Molecule unit scenario
-        run: molecule test -s ${{ matrix.scenario }}
+      - name: Run unit test playbook
+        uses: ./.github/actions/run-unit-test
+        with:
+          playbook: ${{ matrix.playbook }}
 
   validate:
     name: Role validation
@@ -71,6 +76,3 @@ jobs:
         run: |
           cd ..
           python -m galaxy_importer.main --legacy-role --namespace kilip "${GITHUB_REPOSITORY#*/}"
-
-      - name: Run syntax check
-        run: ansible-playbook --syntax-check tests/test.yml

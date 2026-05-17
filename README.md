@@ -67,27 +67,36 @@ Install regolith:
 Development / Testing
 ---------------------
 
-Fast unit tests (repository line generation, no VM):
+CI uses native GitHub Actions (`ansible-playbook` and container jobs). Locally you can run the same playbooks or use Molecule.
+
+Unit tests (repository line generation, no VM):
 
 ```bash
+ansible-playbook molecule/unit/converge.yml
+ansible-playbook molecule/unit-ubuntu-plucky/converge.yml
+ansible-playbook molecule/unit-ubuntu-questing/converge.yml
+```
+
+Integration tests (Docker container, same steps as CI):
+
+```bash
+docker run --rm -it -v "$PWD:/work" -w /work python:3.12-bookworm bash -lc '
+  apt-get update && apt-get install -y python3-pip python3-apt gnupg ca-certificates
+  python3.12 -m pip install --break-system-packages -r requirements-ci.txt
+  export PATH="$HOME/.local/bin:$PATH"
+  ansible-playbook -i localhost, -c local molecule/common/docker_prepare.yml
+  ansible-playbook -i localhost, -c local molecule/common/converge.yml
+  ansible-playbook -i localhost, -c local molecule/default/verify.yml
+'
+```
+
+Optional Molecule wrappers (local development):
+
+```bash
+pip install -r requirements.txt
 molecule test -s unit
-molecule test -s unit-ubuntu-plucky   # Ubuntu 25.04 only
-molecule test -s unit-ubuntu-questing # Ubuntu 25.10 only
-```
-
-Debian integration tests (Docker; one scenario per release):
-
-```bash
-molecule test -s debian-bookworm # 12
-molecule test -s debian-trixie   # 13
-```
-
-Ubuntu integration tests (Docker; one scenario per release):
-
-```bash
-molecule test -s ubuntu-noble    # 24.04
-molecule test -s ubuntu-plucky   # 25.04
-molecule test -s ubuntu-questing # 25.10
+molecule test -s debian-bookworm
+molecule test -s ubuntu-noble
 ```
 
 Optional Vagrant integration (Ubuntu 24.04 noble):
@@ -122,8 +131,8 @@ GitHub Actions workflows:
 
 | Workflow | Trigger | What it runs |
 |----------|---------|----------------|
-| [Unit tests](.github/workflows/unit-tests.yml) | PR, push to `main`, manual | pre-commit; unit matrix (all, Ubuntu 25.04, Ubuntu 25.10); Galaxy import; syntax-check |
-| [Integration tests](.github/workflows/integration-tests.yml) | PR, push to `main`, daily cron, manual | Docker Molecule scenarios (Debian bookworm/trixie, Ubuntu noble/plucky/questing) |
+| [Unit tests](.github/workflows/unit-tests.yml) | PR, push to `main`, manual | pre-commit; `ansible-playbook` unit matrix; Galaxy import |
+| [Integration tests](.github/workflows/integration-tests.yml) | PR, push to `main`, daily cron, manual | Native container jobs (Debian bookworm/trixie, Ubuntu noble/plucky/questing) |
 | [Vagrant integration](.github/workflows/testing.yml) | Manual only | Full install on a self-hosted runner with VirtualBox or libvirt |
 
 The Vagrant scenario verifies package installation, apt dependency health, and registration of the Regolith desktop session under `/usr/share/xsessions`.

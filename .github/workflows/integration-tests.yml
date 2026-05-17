@@ -18,43 +18,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  molecule-debian:
-    name: Debian (${{ matrix.scenario }})
+  integration:
+    name: ${{ matrix.label }}
     runs-on: ubuntu-24.04
+    container:
+      image: ${{ matrix.image }}
     strategy:
       fail-fast: false
       matrix:
-        scenario:
-          - debian-bookworm
-          - debian-trixie
+        include:
+          - image: python:3.12-bookworm
+            label: Debian bookworm
+          - image: debian:trixie
+            label: Debian trixie
+          - image: ubuntu:24.04
+            label: Ubuntu 24.04 (noble)
+          - image: ubuntu:25.04
+            label: Ubuntu 25.04 (plucky)
+          - image: ubuntu:25.10
+            label: Ubuntu 25.10 (questing)
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
 
-      - name: Setup Ansible test environment
-        uses: ./.github/actions/setup-ansible-test
-
-      - name: Run Molecule scenario
-        run: molecule test -s ${{ matrix.scenario }}
-
-  molecule-ubuntu:
-    name: Ubuntu (${{ matrix.scenario }})
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        scenario:
-          - ubuntu-noble
-          - ubuntu-plucky
-          - ubuntu-questing
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
+      - name: Bootstrap container
+        uses: ./.github/actions/bootstrap-container
 
       - name: Setup Ansible test environment
         uses: ./.github/actions/setup-ansible-test
 
-      - name: Run Molecule scenario
-        run: molecule test -s ${{ matrix.scenario }}
+      - name: Run integration test
+        uses: ./.github/actions/run-integration-test

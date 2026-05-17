@@ -1,0 +1,19 @@
+---
+name: Run unit test playbook
+description: Run a repository-facts unit test playbook with ansible-playbook
+
+inputs:
+  playbook:
+    description: Path to the unit test playbook
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Syntax check unit playbook
+      shell: bash
+      run: ansible-playbook --syntax-check "${{ inputs.playbook }}"
+
+    - name: Run unit test playbook
+      shell: bash
+      run: ansible-playbook "${{ inputs.playbook }}"

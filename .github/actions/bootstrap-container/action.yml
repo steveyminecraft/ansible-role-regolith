@@ -1,0 +1,30 @@
+---
+name: Bootstrap container for Ansible
+description: Install packages required to run Ansible in a Debian/Ubuntu container
+
+runs:
+  using: composite
+  steps:
+    - name: Install bootstrap packages
+      shell: bash
+      run: |
+        set -euo pipefail
+        apt-get update
+
+        packages=(ca-certificates gnupg python3-pip python3-apt)
+        if ! command -v python3 >/dev/null 2>&1; then
+          packages=(python3 "${packages[@]}")
+        fi
+
+        DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}"
+
+        for candidate in python3.13 python3.12 python3; do
+          if command -v "${candidate}" >/dev/null 2>&1 \
+            && "${candidate}" -c 'import sys; exit(0 if sys.version_info >= (3, 12) else 1)'; then
+            exit 0
+          fi
+        done
+
+        echo "Python 3.12+ is required for ansible-core 2.20"
+        python3 --version 2>/dev/null || true
+        exit 1

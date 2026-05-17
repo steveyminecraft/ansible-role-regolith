@@ -35,6 +35,8 @@ jobs:
 
       - name: Setup Ansible test environment
         uses: ./.github/actions/setup-ansible-test
+        with:
+          requirements-file: requirements.txt
 
       - name: Run Molecule Vagrant scenario
         run: molecule test
