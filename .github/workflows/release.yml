@@ -38,37 +38,12 @@ jobs:
         with:
           generate_release_notes: true
 
-      - name: Set up Python
-        if: github.event_name == 'workflow_dispatch' || github.ref_type == 'tag'
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
-          cache: pip
-
-      - name: Install Ansible
-        if: github.event_name == 'workflow_dispatch' || github.ref_type == 'tag'
-        run: python -m pip install 'ansible-core>=2.20,<2.21'
-
       - name: Import role into Ansible Galaxy
-        if: github.event_name == 'workflow_dispatch' || github.ref_type == 'tag'
+        if: >-
+          github.event_name == 'workflow_dispatch' && inputs.publish-galaxy
+          || github.ref_type == 'tag'
+        uses: ./.github/actions/import-galaxy-role
+        with:
+          role-name: ${{ inputs.galaxy-role-name || 'regolith' }}
         env:
           GALAXY_API_KEY: ${{ secrets.GALAXY_API_KEY }}
-          GALAXY_ROLE_NAME: ${{ inputs.galaxy-role-name || 'regolith' }}
-          PUBLISH_GALAXY: >-
-            ${{ github.event_name != 'workflow_dispatch' || inputs.publish-galaxy }}
-        run: |
-          if [ "${PUBLISH_GALAXY}" != "true" ]; then
-            echo "Galaxy import skipped by workflow input."
-            exit 0
-          fi
-
-          if [ -z "${GALAXY_API_KEY}" ]; then
-            echo "GALAXY_API_KEY is not set; skipping Galaxy import."
-            exit 0
-          fi
-
-          ansible-galaxy role import \
-            --api-key "${GALAXY_API_KEY}" \
-            --role-name "${GALAXY_ROLE_NAME}" \
-            "${GITHUB_REPOSITORY_OWNER}" \
-            "${GITHUB_REPOSITORY#*/}"

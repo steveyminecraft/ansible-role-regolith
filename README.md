@@ -131,9 +131,25 @@ GitHub Actions workflows:
 
 | Workflow | Trigger | What it runs |
 |----------|---------|----------------|
-| [Unit tests](.github/workflows/unit-tests.yml) | PR, push to `main`, manual | pre-commit; `ansible-playbook` unit matrix; Galaxy import |
+| [Unit tests](.github/workflows/unit-tests.yml) | PR, push to `main`, manual | pre-commit; `ansible-playbook` unit matrix; Galaxy metadata validation |
 | [Integration tests](.github/workflows/integration-tests.yml) | PR, push to `main`, daily cron, manual | Native container jobs (Debian bookworm/trixie, Ubuntu noble/plucky/questing) |
+| [Auto-tag on main](.github/workflows/auto-tag.yml) | Push to `main` | Bumps the latest `v*.*.*` tag (starts at `v3.4.0`) and pushes it |
+| [Publish to Ansible Galaxy](.github/workflows/galaxy-publish.yml) | Push to `main`, manual | Imports `steveyminecraft.regolith` from the latest `main` commit |
+| [Release](.github/workflows/release.yml) | Tag `v*`, manual | GitHub release plus Galaxy import (versioned by tag) |
 | [Vagrant integration](.github/workflows/testing.yml) | Manual only | Full install on a self-hosted runner with VirtualBox or libvirt |
+
+#### Ansible Galaxy
+
+1. Create a [Galaxy](https://galaxy.ansible.com) account and connect your GitHub account.
+2. Add repository secret **`GALAXY_API_KEY`** (Galaxy → Preferences → API Key).
+3. Merge to **`main`** — CI runs, [auto-tag.yml](.github/workflows/auto-tag.yml) creates the next `v*.*.*` tag, [galaxy-publish.yml](.github/workflows/galaxy-publish.yml) imports the role, and [release.yml](.github/workflows/release.yml) publishes a GitHub release for that tag.
+4. To skip auto-tagging for a merge, include `[skip tag]` in the commit message.
+
+Install after publish:
+
+```bash
+ansible-galaxy install steveyminecraft.regolith
+```
 
 The Vagrant scenario verifies package installation, apt dependency health, and registration of the Regolith desktop session under `/usr/share/xsessions`.
 
