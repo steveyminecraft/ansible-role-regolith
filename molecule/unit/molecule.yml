@@ -1,0 +1,22 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: default
+platforms:
+  - name: instance
+    connection_options:
+      ansible_connection: local
+    groups:
+      - molecule
+provisioner:
+  name: ansible
+  playbooks:
+    converge: converge.yml
+verifier:
+  name: ansible
+scenario:
+  name: unit
+  test_sequence:
+    - syntax
+    - converge

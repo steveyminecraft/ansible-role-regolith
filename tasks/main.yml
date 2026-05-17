@@ -1,73 +1,17 @@
 ---
 - name: Install Regolith desktop
-  when: ansible_os_family == "Debian"
+  when: ansible_facts.os_family == "Debian"
   block:
-    - name: Define Regolith package and URL facts
-      ansible.builtin.set_fact:
-        regolith_distribution_packages: >-
-          {{ (ansible_distribution == 'Ubuntu')
-             | ternary(regolith_ubuntu_packages, regolith_debian_packages) }}
-        regolith_legacy_repository_url: >-
-          {{ 'https://regolith-desktop.org/release-3_2-%s-%s-amd64'
-             | format(ansible_distribution | lower, ansible_distribution_release) }}
-        regolith_repository_url: >-
-          {{ regolith_repository_base_url }}/{{ ansible_distribution | lower }}/{{ regolith_repository_suite }}
+    - name: Load host facts
+      ansible.builtin.include_tasks: facts.yml
 
-    - name: Define Regolith repository facts
-      ansible.builtin.set_fact:
-        regolith_legacy_repository: >-
-          deb [arch=amd64 signed-by="/etc/apt/trusted.gpg.d/regolith.asc"]
-          {{ regolith_legacy_repository_url }}
-          {{ ansible_distribution_release }} main
-        regolith_repository: >-
-          deb [arch={{ regolith_repository_architecture }} signed-by={{ regolith_repository_keyring }}]
-          {{ regolith_repository_url }}
-          {{ ansible_distribution_release }} {{ regolith_repository_component }}
+    - name: Validate supported platform
+      ansible.builtin.include_tasks: validate.yml
 
-    - name: Check Regolith apt keyring
-      ansible.builtin.stat:
-        path: "{{ regolith_repository_keyring }}"
-      register: regolith_repository_keyring_stat
+    - name: Configure Regolith repository
+      ansible.builtin.include_tasks: repository.yml
+      tags:
+        - repository
 
-    - name: Ensure Regolith apt key is loaded
-      ansible.builtin.get_url:
-        url: "{{ regolith_repository_key_url }}"
-        dest: /tmp/regolith-archive-keyring.asc
-        mode: "0644"
-      register: regolith_repository_key
-
-    - name: Ensure Regolith apt key is dearmored
-      ansible.builtin.command:
-        cmd: >-
-          gpg --dearmor --yes --output {{ regolith_repository_keyring }}
-          /tmp/regolith-archive-keyring.asc
-      changed_when: >
-        regolith_repository_key is changed
-        or not regolith_repository_keyring_stat.stat.exists
-      when: >
-        regolith_repository_key is changed
-        or not regolith_repository_keyring_stat.stat.exists
-
-    - name: Ensure old Regolith repository is absent
-      ansible.builtin.apt_repository:
-        repo: "{{ regolith_legacy_repository }}"
-        state: absent
-        filename: regolith
-        update_cache: false
-
-    - name: Ensure Regolith repository is configured
-      ansible.builtin.apt_repository:
-        repo: "{{ regolith_repository }}"
-        state: present
-        filename: regolith
-        update_cache: false
-
-    - name: Ensure apt cache is updated
-      ansible.builtin.apt:
-        update_cache: true
-        cache_valid_time: 600
-
-    - name: Ensure Regolith is installed
-      ansible.builtin.package:
-        name: "{{ regolith_distribution_packages }}"
-        state: present
+    - name: Install Regolith packages
+      ansible.builtin.include_tasks: install.yml

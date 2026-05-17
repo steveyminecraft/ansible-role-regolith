@@ -1,0 +1,13 @@
+---
+- name: Unit test Ubuntu 25.10 (questing)
+  import_playbook: ../common/unit/converge.yml
+  vars:
+    regolith_unit_test_matrix:
+      - distribution: Ubuntu
+        release: questing
+        architecture: x86_64
+        expected_arch: amd64
+      - distribution: Ubuntu
+        release: questing
+        architecture: aarch64
+        expected_arch: arm64

@@ -1,0 +1,41 @@
+---
+- name: Define Regolith repository facts
+  ansible.builtin.include_tasks: repository_facts.yml
+
+- name: Check Regolith apt keyring
+  ansible.builtin.stat:
+    path: "{{ regolith_repository_keyring }}"
+  register: regolith_repository_keyring_stat
+
+- name: Ensure Regolith apt key is loaded
+  ansible.builtin.get_url:
+    url: "{{ regolith_repository_key_url }}"
+    dest: /tmp/regolith-archive-keyring.asc
+    mode: "0644"
+  register: regolith_repository_key
+
+- name: Ensure Regolith apt key is dearmored
+  ansible.builtin.command:
+    cmd: >-
+      gpg --dearmor --yes --output {{ regolith_repository_keyring }}
+      /tmp/regolith-archive-keyring.asc
+  changed_when: >
+    regolith_repository_key is changed
+    or not regolith_repository_keyring_stat.stat.exists
+  when: >
+    regolith_repository_key is changed
+    or not regolith_repository_keyring_stat.stat.exists
+
+- name: Ensure old Regolith repository is absent
+  ansible.builtin.apt_repository:
+    repo: "{{ regolith_legacy_repository }}"
+    state: absent
+    filename: regolith
+    update_cache: false
+
+- name: Ensure Regolith repository is configured
+  ansible.builtin.apt_repository:
+    repo: "{{ regolith_repository }}"
+    state: present
+    filename: regolith
+    update_cache: true

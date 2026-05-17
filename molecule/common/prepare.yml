@@ -7,6 +7,7 @@
     - name: Install packages required for role execution
       ansible.builtin.apt:
         name:
+          - ca-certificates
           - python3
           - python3-apt
           - gnupg

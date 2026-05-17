@@ -1,6 +1,7 @@
 ---
 - name: Test Regolith role
   hosts: localhost
-  remote_user: root
+  gather_facts: true
+  become: true
   roles:
     - role: "{{ playbook_dir }}/.."

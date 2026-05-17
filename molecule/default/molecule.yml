@@ -29,8 +29,6 @@ provisioner:
     converge: converge.yml
     verify: verify.yml
     destroy: destroy.yml
-  env:
-    ANSIBLE_INJECT_FACTS_AS_VARS: "false"
 
 verifier:
   name: ansible
