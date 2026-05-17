@@ -1,4 +1,4 @@
 ---
+profile: production
 skip_list:
-  - 'risky-shell-pipe'
-  - 'role-name'
+  - role-name

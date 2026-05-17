@@ -1,0 +1,10 @@
+---
+- name: Ensure apt cache is updated
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 600
+
+- name: Ensure Regolith is installed
+  ansible.builtin.package:
+    name: "{{ regolith_distribution_packages }}"
+    state: present

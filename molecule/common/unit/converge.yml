@@ -1,0 +1,26 @@
+---
+- name: Unit test Regolith repository facts
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    regolith_role_path: "{{ playbook_dir }}/../../.."
+    regolith_repository_key_url: https://archive.regolith-desktop.com/regolith.key
+    regolith_repository_keyring: /usr/share/keyrings/regolith-archive-keyring.gpg
+    regolith_repository_base_url: https://archive.regolith-desktop.com
+    regolith_repository_suite: stable
+    regolith_repository_component: v3.4
+    regolith_packages:
+      - regolith-desktop
+      - regolith-session-flashback
+      - regolith-look-lascaille
+      - xdg-desktop-portal-regolith
+    regolith_ubuntu_packages: "{{ regolith_packages }}"
+    regolith_debian_packages: "{{ regolith_packages }}"
+  tasks:
+    - name: Run repository fact tests
+      ansible.builtin.include_tasks: tasks/test_repository_facts.yml
+      loop: "{{ regolith_unit_test_matrix }}"
+      loop_control:
+        loop_var: test_case
+        label: "{{ test_case.distribution }} {{ test_case.release }} ({{ test_case.expected_arch }})"

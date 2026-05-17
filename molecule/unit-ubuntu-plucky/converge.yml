@@ -1,0 +1,13 @@
+---
+- name: Unit test Ubuntu 25.04 (plucky)
+  import_playbook: ../common/unit/converge.yml
+  vars:
+    regolith_unit_test_matrix:
+      - distribution: Ubuntu
+        release: plucky
+        architecture: x86_64
+        expected_arch: amd64
+      - distribution: Ubuntu
+        release: plucky
+        architecture: aarch64
+        expected_arch: arm64

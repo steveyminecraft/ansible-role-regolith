@@ -3,9 +3,7 @@ regolith_repository_key_url: https://archive.regolith-desktop.com/regolith.key
 regolith_repository_keyring: /usr/share/keyrings/regolith-archive-keyring.gpg
 regolith_repository_base_url: https://archive.regolith-desktop.com
 regolith_repository_suite: stable
-regolith_repository_component: main
-regolith_repository_architecture: >-
-  {{ 'arm64' if ansible_architecture in ['aarch64', 'arm64'] else 'amd64' }}
+regolith_repository_component: v3.4
 
 regolith_packages:
   - regolith-desktop

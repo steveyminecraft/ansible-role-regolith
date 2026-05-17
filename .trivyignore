@@ -1,0 +1,7 @@
+# Local and CI virtualenvs (not shipped with the role)
+.venv/
+.ci-venv/
+
+# Editor and tooling
+.codex/
+.cursor/

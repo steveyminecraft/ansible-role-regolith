@@ -1,0 +1,19 @@
+---
+- name: Ensure distribution is supported
+  ansible.builtin.assert:
+    that:
+      - regolith_distribution in regolith_supported_distributions
+    fail_msg: >-
+      Regolith role supports {{ regolith_supported_distributions | dict2items | map(attribute='key') | join(', ') }}.
+      Got unsupported distribution {{ regolith_distribution | default('unknown') }}.
+    quiet: true
+
+- name: Ensure distribution release is supported
+  ansible.builtin.assert:
+    that:
+      - regolith_distribution_release in regolith_supported_distributions[regolith_distribution]
+    fail_msg: >-
+      Regolith role supports {{ regolith_distribution }}
+      releases {{ regolith_supported_distributions[regolith_distribution] | join(', ') }}.
+      Got unsupported release {{ regolith_distribution_release | default('unknown') }}.
+    quiet: true

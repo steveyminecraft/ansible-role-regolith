@@ -1,2 +1,10 @@
 ---
-# vars file for regolith
+regolith_supported_distributions:
+  Ubuntu:
+    - jammy
+    - noble
+    - plucky
+    - questing
+  Debian:
+    - bookworm
+    - trixie

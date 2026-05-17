@@ -1,14 +1,14 @@
 ---
 galaxy_info:
-  namespace: kilip
+  namespace: steveyminecraft
   role_name: regolith
-  author: Anthonius Munthi
+  author: steveyminecraft
   description: Ansible role regolith
-  issue_tracker_url: https://github.com/kilip/ansible-role-regolith/issues
+  issue_tracker_url: https://github.com/steveyminecraft/ansible-role-regolith/issues
 
   license: MIT
 
-  min_ansible_version: "2.10"
+  min_ansible_version: "2.20"
   github_branch: main
   platforms:
     - name: Ubuntu
@@ -22,6 +22,16 @@ galaxy_info:
         - bookworm
         - trixie
 
-  galaxy_tags: []
+  galaxy_tags:
+    - regolith
+    - desktop
+    - ubuntu
+    - debian
+    - linux
+    - apt
+    - i3
+    - workstation
+    - gui
+    - packages
 
 dependencies: []

@@ -1,7 +1,4 @@
 ansible-core>=2.20,<2.21
-molecule
-molecule-vagrant
-molecule-docker
 ansible-lint
 yamllint
 pre-commit

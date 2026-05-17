@@ -1,0 +1,33 @@
+---
+- name: Unit test all platforms
+  import_playbook: ../common/unit/converge.yml
+  vars:
+    regolith_unit_test_matrix:
+      - distribution: Ubuntu
+        release: jammy
+        architecture: x86_64
+        expected_arch: amd64
+      - distribution: Ubuntu
+        release: noble
+        architecture: x86_64
+        expected_arch: amd64
+      - distribution: Ubuntu
+        release: plucky
+        architecture: x86_64
+        expected_arch: amd64
+      - distribution: Ubuntu
+        release: questing
+        architecture: x86_64
+        expected_arch: amd64
+      - distribution: Ubuntu
+        release: noble
+        architecture: aarch64
+        expected_arch: arm64
+      - distribution: Debian
+        release: bookworm
+        architecture: x86_64
+        expected_arch: amd64
+      - distribution: Debian
+        release: trixie
+        architecture: x86_64
+        expected_arch: amd64

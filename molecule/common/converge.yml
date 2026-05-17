@@ -1,0 +1,6 @@
+---
+- name: Converge
+  hosts: all
+  become: false
+  roles:
+    - role: "{{ playbook_dir }}/../.."

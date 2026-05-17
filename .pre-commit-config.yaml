@@ -28,3 +28,10 @@ repos:
           - --config-file
           - .yamllint
         id: yamllint
+  - repo: local
+    hooks:
+      - id: ansible-lint
+        name: Ansible-lint
+        entry: ansible-lint
+        language: system
+        pass_filenames: false

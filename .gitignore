@@ -1,4 +1,8 @@
 venv
 .venv/
+.ci-venv/
 .ansible/
 **/.vagrant/
+importer_result.json
+.codex/
+molecule/**/group_vars/

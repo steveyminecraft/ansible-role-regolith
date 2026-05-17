@@ -1,0 +1,41 @@
+---
+name: Setup Ansible test environment
+description: Install Python test dependencies for CI
+
+inputs:
+  requirements-file:
+    description: Pip requirements file to install
+    required: false
+    default: requirements-ci.txt
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve Python 3.12+ interpreter
+      shell: bash
+      run: |
+        set -euo pipefail
+        for candidate in python3.13 python3.12 python3; do
+          if command -v "${candidate}" >/dev/null 2>&1 \
+            && "${candidate}" -c 'import sys; exit(0 if sys.version_info >= (3, 12) else 1)'; then
+            echo "ANSIBLE_PYTHON=${candidate}" >> "${GITHUB_ENV}"
+            exit 0
+          fi
+        done
+        echo "Python 3.12+ is required for ansible-core 2.20"
+        exit 1
+
+    - name: Install test dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -f /.dockerenv ]; then
+          "${ANSIBLE_PYTHON}" -m pip install --break-system-packages \
+            -r "${{ inputs.requirements-file }}"
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+        else
+          "${ANSIBLE_PYTHON}" -m venv "${{ github.workspace }}/.ci-venv"
+          "${{ github.workspace }}/.ci-venv/bin/pip" install \
+            -r "${{ inputs.requirements-file }}"
+          echo "${{ github.workspace }}/.ci-venv/bin" >> "${GITHUB_PATH}"
+        fi

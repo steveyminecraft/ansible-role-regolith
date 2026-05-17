@@ -1,0 +1,78 @@
+---
+name: Unit tests
+
+on:  # yamllint disable-line rule:truthy
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unit-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Setup Ansible test environment
+        uses: ./.github/actions/setup-ansible-test
+
+      - name: Run pre-commit
+        run: pre-commit run --all-files
+
+      - name: Syntax check role playbook
+        run: ansible-playbook --syntax-check tests/test.yml
+
+  unit:
+    name: Unit (${{ matrix.label }})
+    runs-on: ubuntu-24.04
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - playbook: molecule/unit/converge.yml
+            label: all platforms
+          - playbook: molecule/unit-ubuntu-plucky/converge.yml
+            label: Ubuntu 25.04
+          - playbook: molecule/unit-ubuntu-questing/converge.yml
+            label: Ubuntu 25.10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Setup Ansible test environment
+        uses: ./.github/actions/setup-ansible-test
+
+      - name: Run unit test playbook
+        uses: ./.github/actions/run-unit-test
+        with:
+          playbook: ${{ matrix.playbook }}
+
+  validate:
+    name: Role validation
+    runs-on: ubuntu-24.04
+    needs: unit
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Setup Ansible test environment
+        uses: ./.github/actions/setup-ansible-test
+
+      - name: Validate role for Ansible Galaxy
+        run: |
+          cd ..
+          python -m galaxy_importer.main --legacy-role --namespace steveyminecraft "${GITHUB_REPOSITORY#*/}"

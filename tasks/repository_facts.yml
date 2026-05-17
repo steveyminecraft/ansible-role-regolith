@@ -1,0 +1,22 @@
+---
+- name: Define Regolith package and URL facts
+  ansible.builtin.set_fact:
+    regolith_distribution_packages: >-
+      {{ (regolith_distribution == 'Ubuntu')
+         | ternary(regolith_ubuntu_packages, regolith_debian_packages) }}
+    regolith_legacy_repository_url: >-
+      {{ 'https://regolith-desktop.org/release-3_2-%s-%s-amd64'
+         | format(regolith_distribution | lower, regolith_distribution_release) }}
+    regolith_repository_url: >-
+      {{ regolith_repository_base_url }}/{{ regolith_distribution | lower }}/{{ regolith_repository_suite }}
+
+- name: Define Regolith repository facts
+  ansible.builtin.set_fact:
+    regolith_legacy_repository: >-
+      deb [arch=amd64 signed-by="/etc/apt/trusted.gpg.d/regolith.asc"]
+      {{ regolith_legacy_repository_url }}
+      {{ regolith_distribution_release }} main
+    regolith_repository: >-
+      deb [arch={{ regolith_repository_architecture }} signed-by={{ regolith_repository_keyring }}]
+      {{ regolith_repository_url }}
+      {{ regolith_distribution_release }} {{ regolith_repository_component }}
