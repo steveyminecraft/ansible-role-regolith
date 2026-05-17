@@ -136,7 +136,12 @@ GitHub Actions workflows:
 | [Auto-tag on main](.github/workflows/auto-tag.yml) | Push to `main` | Bumps the latest `v*.*.*` tag (starts at `v3.4.0`) and pushes it |
 | [Publish to Ansible Galaxy](.github/workflows/galaxy-publish.yml) | Push to `main`, manual | Imports `steveyminecraft.regolith` from the latest `main` commit |
 | [Release](.github/workflows/release.yml) | Tag `v*`, manual | GitHub release plus Galaxy import (versioned by tag) |
+| [Security scan](.github/workflows/trivy.yml) | PR, push to `main`, weekly, manual | Trivy filesystem, secret, and misconfig scan (CRITICAL/HIGH) |
 | [Vagrant integration](.github/workflows/testing.yml) | Manual only | Full install on a self-hosted runner with VirtualBox or libvirt |
+
+#### Dependency updates
+
+[Dependabot](.github/dependabot.yml) opens weekly PRs for **GitHub Actions** and **pip** (`requirements.txt`, `requirements-ci.txt`), with a **7-day cooldown** after each upstream release (14 days for semver-major). Enable it under **Settings → Code security → Dependabot**.
 
 #### Ansible Galaxy
 
@@ -152,6 +157,13 @@ ansible-galaxy install steveyminecraft.regolith
 ```
 
 The Vagrant scenario verifies package installation, apt dependency health, and registration of the Regolith desktop session under `/usr/share/xsessions`.
+
+#### Further hardening (optional)
+
+- **Branch protection** on `main`: require unit and integration checks (and Trivy) before merge.
+- **pip-audit** in CI for Python requirement files (complements Trivy; no lockfile today).
+- **OpenSSF Scorecard** workflow for supply-chain posture on the repo.
+- **CodeQL** is low value here (mostly YAML/Ansible); ansible-lint and Trivy cover more of this role.
 
 License
 -------
