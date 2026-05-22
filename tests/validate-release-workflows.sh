@@ -18,6 +18,8 @@ release="${repo_root}/.github/workflows/release.yml"
 [[ -f "${release_please}" ]] || fail "missing ${release_please}"
 [[ -f "${release}" ]] || fail "missing ${release}"
 
+grep -q 'name: Import role to Ansible Galaxy' "${action}" \
+  || fail "import action must be the Galaxy import composite action"
 grep -q 'git-reference:' "${action}" || fail "import action missing git-reference input"
 grep -q 'required: true' "${action}" || fail "import action must declare required inputs"
 grep -q 'GALAXY_API_KEY is required for Ansible Galaxy publication' "${action}" \
