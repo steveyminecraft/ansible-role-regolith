@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.5.2](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.5.1...v3.5.2) (2026-05-22)
+
+
+### Bug Fixes
+
+* harden Galaxy release guardrails and clarify docs ([6324975](https://github.com/steveyminecraft/ansible-role-regolith/commit/6324975715e114de2c04cfa76f31ff0da31b14ed))
+* harden Galaxy release guardrails and clarify docs ([63cd0c5](https://github.com/steveyminecraft/ansible-role-regolith/commit/63cd0c5059738e3bb81b04789152bbd5d51b238e))
+* keep apt cache override internal to integration tests ([#17](https://github.com/steveyminecraft/ansible-role-regolith/issues/17)) ([824d630](https://github.com/steveyminecraft/ansible-role-regolith/commit/824d6300128064b27f4e6f2a2612a03632f01909))
+* strictly validate Galaxy release tag input ([#16](https://github.com/steveyminecraft/ansible-role-regolith/issues/16)) ([e37ad82](https://github.com/steveyminecraft/ansible-role-regolith/commit/e37ad82a8d31b59531139b67704bc93967f27f0e))
+* suite transition test assertions and skip apt for synthetic suite ([271afc5](https://github.com/steveyminecraft/ansible-role-regolith/commit/271afc558fc15e40a61d1846ebd69d415f17e66e))
+
 ## [3.5.1](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.5.0...v3.5.1) (2026-05-22)
 
 
