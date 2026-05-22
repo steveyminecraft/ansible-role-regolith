@@ -6,4 +6,6 @@ venv
 **/.vagrant/
 importer_result.json
 .codex/
+.cursor/
+env/
 molecule/**/group_vars/
