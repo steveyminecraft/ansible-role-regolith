@@ -35,6 +35,11 @@ repos:
         entry: bash tests/validate-release-workflows.sh
         language: system
         pass_filenames: false
+      - id: validate-gitignore
+        name: Validate gitignore is not violated by tracked files
+        entry: bash tests/validate-gitignore.sh
+        language: system
+        pass_filenames: false
       - id: ansible-lint
         name: Ansible-lint
         entry: ansible-lint

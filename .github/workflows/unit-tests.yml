@@ -36,6 +36,9 @@ jobs:
       - name: Validate release workflow contracts
         run: bash tests/validate-release-workflows.sh
 
+      - name: Validate gitignore is not violated by tracked files
+        run: bash tests/validate-gitignore.sh
+
   unit:
     name: Unit (${{ matrix.label }})
     runs-on: ubuntu-24.04
