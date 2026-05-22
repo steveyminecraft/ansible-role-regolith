@@ -28,6 +28,8 @@ grep -q 'exit 1' "${action}" || fail "import action must exit non-zero on failur
 grep -q '\-\-branch' "${action}" || fail "import action must pass --branch to ansible-galaxy role import"
 grep -q 'git-reference must be a semantic version tag' "${action}" \
   || fail "import action must validate semantic version tags"
+grep -qE '\^v\[0-9\]\+\\\.\[0-9\]\+\\\.\[0-9\]\+\$' "${action}" \
+  || fail "import action must use strict stable semantic-version regex"
 
 grep -q 'git-reference: \${{ needs.release-please.outputs.tag_name }}' "${release_please}" \
   || fail "release-please workflow must pass git-reference to import action"
@@ -57,17 +59,17 @@ if git ls-files --error-unmatch .env >/dev/null 2>&1; then
   fail ".env must not be tracked in git (copy from .env.example locally instead)"
 fi
 
-# Exercise tag validation logic from the composite action.
-validate_tag() {
+validate_stable_release_tag() {
   local tag="$1"
-  case "${tag}" in
-    v[0-9]*.[0-9]*.[0-9]*) return 0 ;;
-    *) return 1 ;;
-  esac
+  [[ "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
 }
 
-validate_tag v1.2.3 || fail "valid tag v1.2.3 rejected"
-validate_tag main && fail "branch name main must be rejected"
-validate_tag v1.2 && fail "incomplete tag v1.2 must be rejected"
+for tag in v1.0.0 v3.5.1 v12.34.567; do
+  validate_stable_release_tag "${tag}" || fail "valid tag ${tag} rejected"
+done
+
+for tag in main refs/heads/main v1.2 v1.2.3junk v1beta.2.3 1.2.3 v1.2.3-rc.1; do
+  validate_stable_release_tag "${tag}" && fail "invalid tag ${tag} must be rejected"
+done
 
 echo "validate-release-workflows: all checks passed"
