@@ -1,0 +1,43 @@
+---
+- name: Remove prior unit test keyring
+  ansible.builtin.file:
+    path: "{{ regolith_test_keyring_path }}"
+    state: absent
+
+- name: Install Regolith apt keyring from fixture
+  ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/repository_keyring.yml"
+  vars:
+    regolith_repository_key_url: "{{ test_case.key_url }}"
+    regolith_repository_keyring: "{{ regolith_test_keyring_path }}"
+
+- name: Record keyring install result
+  ansible.builtin.set_fact:
+    regolith_keyring_changed: "{{ regolith_repository_keyring_copy.changed | bool }}"
+
+- name: Stat installed keyring
+  ansible.builtin.stat:
+    path: "{{ regolith_test_keyring_path }}"
+    checksum_algorithm: sha256
+  register: regolith_keyring_stat
+
+- name: Assert keyring install expectation
+  ansible.builtin.assert:
+    that:
+      - regolith_keyring_stat.stat.exists
+      - regolith_keyring_changed == test_case.expect_changed
+    fail_msg: >-
+      Keyring case {{ test_case.name }} expected changed={{ test_case.expect_changed }},
+      got changed={{ regolith_keyring_changed }}.
+
+- name: Reinstall Regolith apt keyring from same fixture
+  ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/repository_keyring.yml"
+  vars:
+    regolith_repository_key_url: "{{ test_case.key_url }}"
+    regolith_repository_keyring: "{{ regolith_test_keyring_path }}"
+
+- name: Assert identical key material is idempotent
+  ansible.builtin.assert:
+    that:
+      - not regolith_repository_keyring_copy.changed
+    fail_msg: >-
+      Keyring case {{ test_case.name }} changed on second run with identical fixture input.

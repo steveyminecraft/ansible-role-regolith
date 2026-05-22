@@ -1,0 +1,7 @@
+---
+- name: Run Regolith keyring lifecycle tests
+  ansible.builtin.include_tasks: tasks/test_keyring_lifecycle_case.yml
+  loop: "{{ regolith_keyring_lifecycle_matrix }}"
+  loop_control:
+    loop_var: test_case
+    label: "{{ test_case.name }}"

@@ -8,6 +8,18 @@
     - ../../../defaults/main.yml
   vars:
     regolith_role_path: "{{ playbook_dir }}/../../.."
+    regolith_test_keyring_path: /tmp/regolith-unit-test-keyring.gpg
+    regolith_keyring_fixture_v1_url: >-
+      file://{{ regolith_role_path }}/molecule/common/files/regolith-test-key-v1.asc
+    regolith_keyring_fixture_v2_url: >-
+      file://{{ regolith_role_path }}/molecule/common/files/regolith-test-key-v2.asc
+    regolith_keyring_lifecycle_matrix:
+      - name: initial install from fixture v1
+        key_url: "{{ regolith_keyring_fixture_v1_url }}"
+        expect_changed: true
+      - name: rotate to fixture v2
+        key_url: "{{ regolith_keyring_fixture_v2_url }}"
+        expect_changed: true
     regolith_repository_key_url: https://archive.regolith-desktop.com/regolith.key
     regolith_repository_keyring: /usr/share/keyrings/regolith-archive-keyring.gpg
     regolith_repository_base_url: https://archive.regolith-desktop.com
@@ -94,6 +106,9 @@
 
     - name: Run architecture validation tests
       ansible.builtin.include_tasks: tasks/test_architecture_validation.yml
+
+    - name: Run keyring lifecycle tests
+      ansible.builtin.include_tasks: tasks/test_keyring_lifecycle.yml
 
     - name: Run repository fact tests
       ansible.builtin.include_tasks: tasks/test_repository_facts.yml
