@@ -173,7 +173,6 @@ GitHub Actions workflows:
 | [Release Please](.github/workflows/release-please.yml) | Push to `main`, manual | Creates or updates the release PR from Conventional Commits |
 | [Release](.github/workflows/release.yml) | Published GitHub release, manual | Imports the released role revision into Ansible Galaxy |
 | [Security scan](.github/workflows/trivy.yml) | PR, push to `main`, weekly, manual | Trivy filesystem, secret, and misconfig scan (CRITICAL/HIGH) |
-| [Vagrant integration](.github/workflows/testing.yml) | Manual only | Full install on a self-hosted runner with VirtualBox or libvirt |
 
 #### Dependency updates
 
