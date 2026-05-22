@@ -174,7 +174,7 @@ GitHub Actions workflows:
 |----------|---------|----------------|
 | [Unit tests](.github/workflows/unit-tests.yml) | PR, push to `main`, manual | pre-commit; `ansible-playbook` unit matrix; Galaxy metadata validation |
 | [Integration tests](.github/workflows/integration-tests.yml) | PR, push to `main`, daily cron, manual | Native container jobs (Debian bookworm/trixie, Ubuntu jammy/noble/plucky/questing) |
-| [Check Regolith stable pin (docs)](.github/workflows/check-regolith-stable.yml) | Daily cron, manual | Compares `defaults/main.yml` pinned component with the latest stable release listed on Regolith docs and fails on mismatch |
+| [Check Regolith stable pin (docs)](.github/workflows/check-regolith-stable.yml) | Daily cron, manual | Compares `defaults/main.yml` pinned component with the latest stable release listed on Regolith docs, opens a drift issue, and fails on mismatch |
 | [Release Please](.github/workflows/release-please.yml) | Push to `main`, manual | Creates or updates the release PR; imports the released tag into Ansible Galaxy when a release is created |
 | [Release](.github/workflows/release.yml) | Manual only | Recovery import of an existing semantic-version tag into Ansible Galaxy |
 | [Security scan](.github/workflows/trivy.yml) | PR, push to `main`, weekly, manual | Trivy filesystem, secret, and misconfig scan (CRITICAL/HIGH) |
