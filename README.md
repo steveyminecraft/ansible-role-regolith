@@ -199,6 +199,7 @@ Repository key fingerprint enforcement is not enabled because this role does not
 
 #### Further hardening (optional)
 
+- **Repository signing-key rotation:** the role refreshes the installed keyring when downloaded key material changes, but automatic rotation after upstream key changes should still be verified on real hosts when Regolith publishes a new signing key.
 - **Branch protection** on `main`: require unit and integration checks (and Trivy) before merge.
 - **pip-audit** in CI for Python requirement files (complements Trivy; no lockfile today).
 - **OpenSSF Scorecard** workflow for supply-chain posture on the repo.
