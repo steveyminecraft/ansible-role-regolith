@@ -8,6 +8,7 @@ on:  # yamllint disable-line rule:truthy
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: check-regolith-stable-${{ github.workflow }}-${{ github.ref }}
@@ -55,6 +56,7 @@ jobs:
           echo "value=$docs_value" >> "$GITHUB_OUTPUT"
 
       - name: Compare pinned vs docs stable
+        id: compare
         run: |
           pinned="${{ steps.pinned.outputs.value }}"
           stable="${{ steps.docs.outputs.value }}"
@@ -63,6 +65,76 @@ jobs:
           echo "Docs stable: $stable"
 
           if [ "$pinned" != "$stable" ]; then
-            echo "::error::Pinned component ($pinned) does not match docs stable ($stable)."
-            exit 1
+            echo "mismatch=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "mismatch=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Open issue when mismatch is detected
+        if: steps.compare.outputs.mismatch == 'true'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const pinned = `${{ steps.pinned.outputs.value }}`;
+            const stable = `${{ steps.docs.outputs.value }}`;
+            const label = "regolith-stable-drift";
+            const title = `Regolith stable drift: pinned ${pinned} vs docs ${stable}`;
+
+            const { owner, repo } = context.repo;
+
+            const labelsResp = await github.rest.issues.listLabelsOnRepo({
+              owner,
+              repo,
+              per_page: 100,
+            });
+
+            const hasLabel = labelsResp.data.some((entry) => entry.name === label);
+            if (!hasLabel) {
+              await github.rest.issues.createLabel({
+                owner,
+                repo,
+                name: label,
+                color: "d73a4a",
+                description: "Pinned Regolith component differs from docs stable release",
+              });
+            }
+
+            const openIssues = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: "open",
+              labels: label,
+              per_page: 100,
+            });
+
+            const existing = openIssues.data.find((issue) => issue.title === title);
+            if (existing) {
+              core.info(`Matching open issue already exists: #${existing.number}`);
+              return;
+            }
+
+            const body = [
+              "The scheduled docs-based stable version check detected drift.",
+              "",
+              `- pinned in \`defaults/main.yml\`: \`${pinned}\``,
+              `- stable from https://regolith-desktop.com/docs/reference/releases/: \`${stable}\``,
+              "",
+              "Please update:",
+              "- `defaults/main.yml` (`regolith_repository_component`)",
+              "- `meta/argument_specs.yml` choices (if needed)",
+              "- related README text when appropriate",
+            ].join("\n");
+
+            await github.rest.issues.create({
+              owner,
+              repo,
+              title,
+              body,
+              labels: [label],
+            });
+
+      - name: Fail workflow on mismatch
+        if: steps.compare.outputs.mismatch == 'true'
+        run: |
+          echo "::error::Pinned component (${{ steps.pinned.outputs.value }}) does not match docs stable (${{ steps.docs.outputs.value }})."
+          exit 1
