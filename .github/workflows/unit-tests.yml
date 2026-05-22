@@ -33,6 +33,9 @@ jobs:
       - name: Syntax check role playbook
         run: ansible-playbook --syntax-check tests/test.yml
 
+      - name: Validate release workflow contracts
+        run: bash tests/validate-release-workflows.sh
+
   unit:
     name: Unit (${{ matrix.label }})
     runs-on: ubuntu-24.04
