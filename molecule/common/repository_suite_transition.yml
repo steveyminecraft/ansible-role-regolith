@@ -11,6 +11,9 @@
     regolith_role_path: "{{ playbook_dir }}/../.."
     regolith_sources_path: /etc/apt/sources.list.d/regolith.list
     regolith_alternate_suite: preview
+    regolith_repository_update_apt_cache: false
+    regolith_default_suite_segment: "{{ '/' ~ regolith_repository_suite ~ ' ' }}"
+    regolith_alternate_suite_segment: "{{ '/' ~ regolith_alternate_suite ~ ' ' }}"
   tasks:
     - name: Load host facts
       ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/facts.yml"
@@ -30,8 +33,8 @@
       ansible.builtin.assert:
         that:
           - regolith_active_repository_lines | length == 1
-          - regolith_active_repository_lines[0] is search('/{{ regolith_repository_suite }}/')
-          - regolith_active_repository_lines[0] is not search('/{{ regolith_alternate_suite }}/')
+          - regolith_default_suite_segment in regolith_active_repository_lines[0]
+          - regolith_alternate_suite_segment not in regolith_active_repository_lines[0]
         fail_msg: >-
           Expected exactly one active Regolith repository line containing the stable suite path.
           Got: {{ regolith_active_repository_lines }}
@@ -60,8 +63,8 @@
       ansible.builtin.assert:
         that:
           - regolith_active_repository_lines | length == 1
-          - regolith_active_repository_lines[0] is search('/{{ regolith_alternate_suite }}/')
-          - regolith_active_repository_lines[0] is not search('/{{ regolith_repository_suite }}/')
+          - regolith_alternate_suite_segment in regolith_active_repository_lines[0]
+          - regolith_default_suite_segment not in regolith_active_repository_lines[0]
         fail_msg: >-
           Expected exactly one active Regolith repository line containing the {{ regolith_alternate_suite }} suite path.
           Got: {{ regolith_active_repository_lines }}
@@ -88,8 +91,8 @@
       ansible.builtin.assert:
         that:
           - regolith_active_repository_lines | length == 1
-          - regolith_active_repository_lines[0] is search('/{{ regolith_repository_suite }}/')
-          - regolith_active_repository_lines[0] is not search('/{{ regolith_alternate_suite }}/')
+          - regolith_default_suite_segment in regolith_active_repository_lines[0]
+          - regolith_alternate_suite_segment not in regolith_active_repository_lines[0]
         fail_msg: >-
           Expected exactly one active Regolith repository line containing the stable suite path.
           Got: {{ regolith_active_repository_lines }}
