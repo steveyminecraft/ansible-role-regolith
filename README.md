@@ -101,7 +101,7 @@ Development / Testing
 
 CI uses native GitHub Actions (`ansible-playbook` and container jobs). Locally you can run the same playbooks or use Molecule.
 
-For local autoenv/direnv-style setup, create a private `.env` from the example file and edit any machine-specific values:
+For local autoenv/direnv-style setup, copy the tracked example file to a private local `.env` file and edit any machine-specific values. The `.env` path is listed in `.gitignore` and must not be committed; only [`.env.example`](.env.example) belongs in git.
 
 ```bash
 cp .env.example .env
@@ -181,12 +181,14 @@ GitHub Actions workflows:
 
 #### Ansible Galaxy
 
+This repository does **not** auto-tag `main` or publish the default branch to Galaxy. Every import must target an existing semantic-version tag via `ansible-galaxy role import --branch <tag>`.
+
 1. Create a [Galaxy](https://galaxy.ansible.com) account and connect your GitHub account.
 2. Add repository secret **`GALAXY_API_KEY`** (Galaxy → Preferences → API Key). Publication jobs fail if this secret is missing.
 3. Use Conventional Commits in merged PR titles/commits. `fix:` creates patch releases, `feat:` creates minor releases, and breaking changes create major releases.
 4. Merge the Release Please PR to create the version tag and GitHub release.
-5. When Release Please creates a release, [release-please.yml](.github/workflows/release-please.yml) checks out that tag and imports it into Ansible Galaxy with `ansible-galaxy role import --branch <tag>`. The import always targets the tagged revision, not the default `main` branch.
-6. For recovery, run [release.yml](.github/workflows/release.yml) manually and supply an existing semantic-version tag (for example `v1.2.3`). The workflow cannot publish `main` or another branch.
+5. **Normal publish path:** when Release Please creates a release, [release-please.yml](.github/workflows/release-please.yml) checks out that tag and imports it into Ansible Galaxy with `ansible-galaxy role import --branch <tag>`.
+6. **Recovery publish path:** run [release.yml](.github/workflows/release.yml) manually, supply an existing semantic-version tag (for example `v1.2.3`) as `release-tag`, and the workflow passes the same tag to Galaxy as `git-reference`. The workflow cannot publish `main` or another branch.
 
 PR validation and ordinary `main` CI runs do not import the role into Galaxy.
 

@@ -46,6 +46,17 @@ if grep -q 'github\.ref' "${release}"; then
   fail "release workflow must not fall back to github.ref for publication"
 fi
 
+while IFS= read -r workflow; do
+  if grep -q 'import-galaxy-role' "${workflow}" \
+    && ! grep -q 'git-reference:' "${workflow}"; then
+    fail "${workflow} calls import-galaxy-role without git-reference"
+  fi
+done < <(find "${repo_root}/.github/workflows" -name '*.yml' -o -name '*.yaml')
+
+if git ls-files --error-unmatch .env >/dev/null 2>&1; then
+  fail ".env must not be tracked in git (copy from .env.example locally instead)"
+fi
+
 # Exercise tag validation logic from the composite action.
 validate_tag() {
   local tag="$1"
