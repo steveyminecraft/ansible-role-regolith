@@ -3,6 +3,9 @@
   hosts: localhost
   connection: local
   gather_facts: false
+  vars_files:
+    - ../../../vars/main.yml
+    - ../../../defaults/main.yml
   vars:
     regolith_role_path: "{{ playbook_dir }}/../../.."
     regolith_repository_key_url: https://archive.regolith-desktop.com/regolith.key
@@ -10,14 +13,49 @@
     regolith_repository_base_url: https://archive.regolith-desktop.com
     regolith_repository_suite: stable
     regolith_repository_component: v3.4
-    regolith_packages:
-      - regolith-desktop
-      - regolith-session-flashback
-      - regolith-look-lascaille
-      - xdg-desktop-portal-regolith
-    regolith_ubuntu_packages: "{{ regolith_packages }}"
-    regolith_debian_packages: "{{ regolith_packages }}"
+    regolith_validation_failure_matrix:
+      - name: unsupported OS family
+        os_family: RedHat
+        distribution: Fedora
+        release: "41"
+        architecture: x86_64
+        expected_message: Regolith role supports Ubuntu and Debian systems only.
+      - name: unsupported Debian-family derivative
+        os_family: Debian
+        distribution: Linux Mint
+        release: wilma
+        architecture: x86_64
+        expected_message: Regolith role supports Ubuntu and Debian only.
+      - name: unsupported Ubuntu release
+        os_family: Debian
+        distribution: Ubuntu
+        release: focal
+        architecture: x86_64
+        expected_message: Got unsupported release focal.
+      - name: unsupported architecture
+        os_family: Debian
+        distribution: Ubuntu
+        release: noble
+        architecture: riscv64
+        expected_message: Got machine architecture riscv64.
+      - name: unsupported architecture override
+        os_family: Debian
+        distribution: Ubuntu
+        release: noble
+        architecture: x86_64
+        repository_architecture: ppc64le
+        expected_message: Got ppc64le.
   tasks:
+    - name: Run package selection tests
+      ansible.builtin.include_tasks: tasks/test_package_selection.yml
+
+    - name: Run validation failure tests
+      ansible.builtin.include_tasks: tasks/test_validation_failure.yml
+      loop: "{{ regolith_validation_failure_matrix }}"
+      loop_control:
+        loop_var: test_case
+        label: "{{ test_case.name }}"
+
     - name: Run repository fact tests
       ansible.builtin.include_tasks: tasks/test_repository_facts.yml
       loop: "{{ regolith_unit_test_matrix }}"

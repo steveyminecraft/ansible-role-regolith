@@ -1,0 +1,41 @@
+---
+- name: Assert default package selection is unchanged
+  ansible.builtin.assert:
+    that:
+      - regolith_packages | sort == regolith_expected_default_packages | sort
+    fail_msg: >-
+      Default Regolith package selection changed.
+      Expected {{ regolith_expected_default_packages | join(', ') }}.
+      Got {{ regolith_packages | join(', ') }}.
+  vars:
+    regolith_expected_default_packages:
+      - regolith-desktop
+      - regolith-session-flashback
+      - regolith-look-lascaille
+      - xdg-desktop-portal-regolith
+
+- name: Build custom package selection
+  ansible.builtin.set_fact:
+    regolith_custom_packages: >-
+      {{
+        ['regolith-desktop', 'xdg-desktop-portal-regolith']
+        + ['regolith-session-sway']
+        + ['regolith-look-nord']
+        + ['regolith-compositor-picom-glx']
+      }}
+
+- name: Assert custom package selection can be composed
+  ansible.builtin.assert:
+    that:
+      - regolith_custom_packages == regolith_expected_custom_packages
+    fail_msg: >-
+      Custom Regolith package selection did not compose as expected.
+      Expected {{ regolith_expected_custom_packages | join(', ') }}.
+      Got {{ regolith_custom_packages | join(', ') }}.
+  vars:
+    regolith_expected_custom_packages:
+      - regolith-desktop
+      - xdg-desktop-portal-regolith
+      - regolith-session-sway
+      - regolith-look-nord
+      - regolith-compositor-picom-glx

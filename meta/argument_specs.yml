@@ -1,0 +1,96 @@
+---
+argument_specs:
+  main:
+    short_description: Install Regolith Desktop from the official APT repository
+    description:
+      - Configure the official Regolith APT repository.
+      - Install Regolith Desktop packages on supported Ubuntu and Debian releases.
+    options:
+      regolith_repository_key_url:
+        type: str
+        required: false
+        description:
+          - URL for the Regolith repository signing key.
+      regolith_repository_keyring:
+        type: path
+        required: false
+        description:
+          - Local path for the dearmored Regolith repository keyring.
+      regolith_repository_base_url:
+        type: str
+        required: false
+        description:
+          - Base URL for the Regolith package archive.
+      regolith_repository_suite:
+        type: str
+        required: false
+        description:
+          - Regolith repository suite.
+          - Defaults to C(stable).
+      regolith_repository_component:
+        type: str
+        required: false
+        choices:
+          - v3.4
+          - main
+        description:
+          - Regolith repository component.
+          - C(v3.4) pins the current supported release; C(main) follows the latest stable archive component.
+      regolith_repository_architecture:
+        type: str
+        required: false
+        choices:
+          - amd64
+          - arm64
+        description:
+          - Optional repository architecture override.
+          - When omitted, the role detects C(amd64) or C(arm64) from host facts.
+      regolith_repository_prerequisite_packages:
+        type: list
+        elements: str
+        required: false
+        description:
+          - Packages required before configuring the Regolith APT repository.
+      regolith_base_packages:
+        type: list
+        elements: str
+        required: false
+        description:
+          - Base packages installed for every Regolith deployment.
+      regolith_session_packages:
+        type: list
+        elements: str
+        required: false
+        description:
+          - Regolith session packages to install.
+      regolith_look_packages:
+        type: list
+        elements: str
+        required: false
+        description:
+          - Regolith look packages to install.
+      regolith_extra_packages:
+        type: list
+        elements: str
+        required: false
+        description:
+          - Additional Regolith-related packages to install.
+      regolith_packages:
+        type: list
+        elements: str
+        required: false
+        description:
+          - Complete package list to install.
+          - Override this to replace the computed base, session, look, and extra package list.
+      regolith_ubuntu_packages:
+        type: list
+        elements: str
+        required: false
+        description:
+          - Package list installed on Ubuntu hosts.
+      regolith_debian_packages:
+        type: list
+        elements: str
+        required: false
+        description:
+          - Package list installed on Debian hosts.

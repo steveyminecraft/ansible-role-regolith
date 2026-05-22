@@ -8,3 +8,9 @@ regolith_supported_distributions:
   Debian:
     - bookworm
     - trixie
+
+regolith_supported_architectures:
+  x86_64: amd64
+  amd64: amd64
+  aarch64: arm64
+  arm64: arm64

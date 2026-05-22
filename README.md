@@ -5,13 +5,14 @@ Requirements
 ------------
 
 - **ansible-core 2.20** or newer (2.20 is the supported baseline; avoid EOL 2.15–2.19).
-- Target host must be a [supported platform](#supported-platforms) (Debian family).
+- Target host must be a [supported platform](#supported-platforms) (Ubuntu or Debian).
 - Root privileges (`become: true`) for APT repository and package changes.
 
 Supported platforms
 -------------------
 
 This role follows the [Regolith install documentation](https://regolith-desktop.com/docs/using-regolith/install/).
+Only the Ubuntu and Debian distributions listed below are supported; Debian-family derivatives are rejected during validation.
 
 | Distribution | Release (codename) | Version |
 |--------------|-------------------|---------|
@@ -22,7 +23,7 @@ This role follows the [Regolith install documentation](https://regolith-desktop.
 | Debian | bookworm | 12 |
 | Debian | trixie | 13 |
 
-Unsupported distributions or releases fail during role validation with a clear error message.
+Unsupported operating systems, Debian-family derivatives, distributions, releases, or architectures fail during role validation with a clear error message.
 
 Role Variables
 --------------
@@ -37,17 +38,47 @@ regolith_repository_suite: stable
 regolith_repository_component: v3.4
 # regolith_repository_architecture is auto-detected from ansible_facts in tasks/facts.yml
 
-regolith_packages:
+regolith_repository_prerequisite_packages:
+  - ca-certificates
+  - gnupg
+
+regolith_base_packages:
   - regolith-desktop
-  - regolith-session-flashback
-  - regolith-look-lascaille
   - xdg-desktop-portal-regolith
+
+regolith_session_packages:
+  - regolith-session-flashback
+
+regolith_look_packages:
+  - regolith-look-lascaille
+
+regolith_extra_packages: []
+
+regolith_packages: >-
+  {{
+    regolith_base_packages
+    + regolith_session_packages
+    + regolith_look_packages
+    + regolith_extra_packages
+  }}
 
 regolith_ubuntu_packages: "{{ regolith_packages }}"
 regolith_debian_packages: "{{ regolith_packages }}"
 ```
 
 The default `regolith_repository_component` value of `v3.4` matches the official install examples for a pinned Regolith release. Set it to `main` to follow the latest stable release in the archive.
+Flashback is the default Regolith session. To choose a different session or look, override the package group you want to change:
+
+```yaml
+regolith_session_packages:
+  - regolith-session-sway
+regolith_look_packages:
+  - regolith-look-nord
+regolith_extra_packages:
+  - regolith-compositor-picom-glx
+```
+
+You can still override `regolith_packages` directly to replace the complete install list.
 
 Dependencies
 ------------
@@ -68,6 +99,12 @@ Development / Testing
 ---------------------
 
 CI uses native GitHub Actions (`ansible-playbook` and container jobs). Locally you can run the same playbooks or use Molecule.
+
+For local autoenv/direnv-style setup, create a private `.env` from the example file and edit any machine-specific values:
+
+```bash
+cp .env.example .env
+```
 
 Unit tests (repository line generation, no VM):
 
@@ -132,10 +169,9 @@ GitHub Actions workflows:
 | Workflow | Trigger | What it runs |
 |----------|---------|----------------|
 | [Unit tests](.github/workflows/unit-tests.yml) | PR, push to `main`, manual | pre-commit; `ansible-playbook` unit matrix; Galaxy metadata validation |
-| [Integration tests](.github/workflows/integration-tests.yml) | PR, push to `main`, daily cron, manual | Native container jobs (Debian bookworm/trixie, Ubuntu noble/plucky/questing) |
-| [Auto-tag on main](.github/workflows/auto-tag.yml) | Push to `main` | Bumps the latest `v*.*.*` tag (starts at `v3.4.0`) and pushes it |
-| [Publish to Ansible Galaxy](.github/workflows/galaxy-publish.yml) | Push to `main`, manual | Imports `steveyminecraft.regolith` from the latest `main` commit |
-| [Release](.github/workflows/release.yml) | Tag `v*`, manual | GitHub release plus Galaxy import (versioned by tag) |
+| [Integration tests](.github/workflows/integration-tests.yml) | PR, push to `main`, daily cron, manual | Native container jobs (Debian bookworm/trixie, Ubuntu jammy/noble/plucky/questing) |
+| [Release Please](.github/workflows/release-please.yml) | Push to `main`, manual | Creates or updates the release PR from Conventional Commits |
+| [Release](.github/workflows/release.yml) | Published GitHub release, manual | Imports the released role revision into Ansible Galaxy |
 | [Security scan](.github/workflows/trivy.yml) | PR, push to `main`, weekly, manual | Trivy filesystem, secret, and misconfig scan (CRITICAL/HIGH) |
 | [Vagrant integration](.github/workflows/testing.yml) | Manual only | Full install on a self-hosted runner with VirtualBox or libvirt |
 
@@ -147,8 +183,9 @@ GitHub Actions workflows:
 
 1. Create a [Galaxy](https://galaxy.ansible.com) account and connect your GitHub account.
 2. Add repository secret **`GALAXY_API_KEY`** (Galaxy → Preferences → API Key).
-3. Merge to **`main`** — CI runs, [auto-tag.yml](.github/workflows/auto-tag.yml) creates the next `v*.*.*` tag, [galaxy-publish.yml](.github/workflows/galaxy-publish.yml) imports the role, and [release.yml](.github/workflows/release.yml) publishes a GitHub release for that tag.
-4. To skip auto-tagging for a merge, include `[skip tag]` in the commit message.
+3. Use Conventional Commits in merged PR titles/commits. `fix:` creates patch releases, `feat:` creates minor releases, and breaking changes create major releases.
+4. Merge the Release Please PR to create the version tag and GitHub release.
+5. The published GitHub release triggers [release.yml](.github/workflows/release.yml), which imports that released revision into Ansible Galaxy. The manual dispatch path is for exceptional recovery imports only.
 
 Install after publish:
 
@@ -157,6 +194,8 @@ ansible-galaxy install steveyminecraft.regolith
 ```
 
 The Vagrant scenario verifies package installation, apt dependency health, and registration of the Regolith desktop session under `/usr/share/xsessions`.
+
+Repository key fingerprint enforcement is not enabled because this role does not currently have an authoritative published fingerprint to validate against. The role follows the official Regolith key-install method and removes temporary key material after dearmoring.
 
 #### Further hardening (optional)
 

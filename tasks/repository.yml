@@ -2,29 +2,49 @@
 - name: Define Regolith repository facts
   ansible.builtin.include_tasks: repository_facts.yml
 
+- name: Ensure Regolith repository prerequisites are installed
+  ansible.builtin.apt:
+    name: "{{ regolith_repository_prerequisite_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 600
+
 - name: Check Regolith apt keyring
   ansible.builtin.stat:
     path: "{{ regolith_repository_keyring }}"
   register: regolith_repository_keyring_stat
 
-- name: Ensure Regolith apt key is loaded
-  ansible.builtin.get_url:
-    url: "{{ regolith_repository_key_url }}"
-    dest: /tmp/regolith-archive-keyring.asc
-    mode: "0644"
-  register: regolith_repository_key
+- name: Install Regolith apt keyring
+  when: not regolith_repository_keyring_stat.stat.exists
+  block:
+    - name: Create temporary file for Regolith apt key
+      ansible.builtin.tempfile:
+        state: file
+        suffix: .asc
+      register: regolith_repository_key_tempfile
+      changed_when: false
 
-- name: Ensure Regolith apt key is dearmored
-  ansible.builtin.command:
-    cmd: >-
-      gpg --dearmor --yes --output {{ regolith_repository_keyring }}
-      /tmp/regolith-archive-keyring.asc
-  changed_when: >
-    regolith_repository_key is changed
-    or not regolith_repository_keyring_stat.stat.exists
-  when: >
-    regolith_repository_key is changed
-    or not regolith_repository_keyring_stat.stat.exists
+    - name: Download Regolith apt key
+      ansible.builtin.get_url:
+        url: "{{ regolith_repository_key_url }}"
+        dest: "{{ regolith_repository_key_tempfile.path }}"
+        force: true
+        mode: "0644"
+      changed_when: false
+
+    - name: Ensure Regolith apt key is dearmored
+      ansible.builtin.command:
+        cmd: >-
+          gpg --dearmor --yes --output {{ regolith_repository_keyring }}
+          {{ regolith_repository_key_tempfile.path }}
+      changed_when: true
+  always:
+    - name: Remove temporary Regolith apt key
+      ansible.builtin.file:
+        path: "{{ regolith_repository_key_tempfile.path }}"
+        state: absent
+      changed_when: false
+      when: regolith_repository_key_tempfile.path is defined
 
 - name: Ensure old Regolith repository is absent
   ansible.builtin.apt_repository:

@@ -1,6 +1,7 @@
 venv
 .venv/
 .ci-venv/
+.env
 .ansible/
 **/.vagrant/
 importer_result.json

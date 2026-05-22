@@ -18,6 +18,19 @@ runs:
 
         DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}"
 
+        if [ -r /etc/os-release ]; then
+          # shellcheck disable=SC1091
+          . /etc/os-release
+          if [ "${ID:-}" = "ubuntu" ] && [ "${VERSION_CODENAME:-}" = "jammy" ]; then
+            if ! command -v python3.12 >/dev/null 2>&1; then
+              DEBIAN_FRONTEND=noninteractive apt-get install -y software-properties-common
+              add-apt-repository -y ppa:deadsnakes/ppa
+              apt-get update
+              DEBIAN_FRONTEND=noninteractive apt-get install -y python3.12 python3.12-venv
+            fi
+          fi
+        fi
+
         for candidate in python3.13 python3.12 python3; do
           if command -v "${candidate}" >/dev/null 2>&1 \
             && "${candidate}" -c 'import sys; exit(0 if sys.version_info >= (3, 12) else 1)'; then
