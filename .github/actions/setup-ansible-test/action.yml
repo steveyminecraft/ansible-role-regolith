@@ -29,13 +29,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        if [ -f /.dockerenv ]; then
-          "${ANSIBLE_PYTHON}" -m pip install --break-system-packages \
-            -r "${{ inputs.requirements-file }}"
-          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
-        else
-          "${ANSIBLE_PYTHON}" -m venv "${{ github.workspace }}/.ci-venv"
-          "${{ github.workspace }}/.ci-venv/bin/pip" install \
-            -r "${{ inputs.requirements-file }}"
-          echo "${{ github.workspace }}/.ci-venv/bin" >> "${GITHUB_PATH}"
-        fi
+        "${ANSIBLE_PYTHON}" -m venv "${{ github.workspace }}/.ci-venv"
+        "${{ github.workspace }}/.ci-venv/bin/pip" install \
+          -r "${{ inputs.requirements-file }}"
+        echo "${{ github.workspace }}/.ci-venv/bin" >> "${GITHUB_PATH}"
