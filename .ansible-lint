@@ -1,4 +1,30 @@
 ---
+use_default_rules: true
 profile: production
+
+exclude_paths:
+  - .ansible/
+  - .cache/
+  - .env/
+  - .github/
+  - .venv/
+  - molecule/**/.molecule/
+  - molecule/**/.vagrant/
+  - collections/
+
 skip_list:
   - role-name
+
+warn_list:
+  - experimental
+  - ignore-errors
+  - risky-file-permissions
+  - var-naming
+
+enable_list:
+  - meta
+  - schema
+  - yaml
+
+offline: true
+verbosity: 1
