@@ -48,5 +48,6 @@ jobs:
         uses: ./.github/actions/import-galaxy-role
         with:
           role-name: regolith
+          git-reference: ${{ needs.release-please.outputs.tag_name }}
         env:
           GALAXY_API_KEY: ${{ secrets.GALAXY_API_KEY }}

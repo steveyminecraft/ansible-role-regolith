@@ -3,6 +3,9 @@ name: Import role to Ansible Galaxy
 description: Import this repository as a legacy role on Ansible Galaxy
 
 inputs:
+  git-reference:
+    description: Existing Git tag to import into Ansible Galaxy, for example v1.2.3
+    required: true
   role-name:
     description: Galaxy role name
     required: false
@@ -24,15 +27,25 @@ runs:
       shell: bash
       env:
         GALAXY_API_KEY: ${{ env.GALAXY_API_KEY }}
+        GIT_REFERENCE: ${{ inputs.git-reference }}
       run: |
         set -euo pipefail
         if [ -z "${GALAXY_API_KEY:-}" ]; then
-          echo "GALAXY_API_KEY is not set; skipping Galaxy import."
-          exit 0
+          echo "GALAXY_API_KEY is required for Ansible Galaxy publication."
+          exit 1
         fi
+
+        case "${GIT_REFERENCE}" in
+          v[0-9]*.[0-9]*.[0-9]*) ;;
+          *)
+            echo "git-reference must be a semantic version tag such as v1.2.3."
+            exit 1
+            ;;
+        esac
 
         ansible-galaxy role import \
           --api-key "${GALAXY_API_KEY}" \
+          --branch "${GIT_REFERENCE}" \
           --role-name "${{ inputs.role-name }}" \
           "${GITHUB_REPOSITORY_OWNER}" \
           "${GITHUB_REPOSITORY#*/}"

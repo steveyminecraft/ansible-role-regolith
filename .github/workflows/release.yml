@@ -2,16 +2,12 @@
 name: Release
 
 on:  # yamllint disable-line rule:truthy
-  release:
-    types:
-      - published
   workflow_dispatch:
     inputs:
-      publish-galaxy:
-        description: "Import the role into Ansible Galaxy"
-        default: true
-        required: false
-        type: boolean
+      release-tag:
+        description: "Existing semantic version tag to publish, for example v1.2.3"
+        required: true
+        type: string
       galaxy-role-name:
         description: "Galaxy role name"
         default: regolith
@@ -19,26 +15,24 @@ on:  # yamllint disable-line rule:truthy
         type: string
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
-    name: Release
+  publish-galaxy:
+    name: Publish Galaxy (recovery)
     runs-on: ubuntu-24.04
 
     steps:
-      - name: Check out repository
+      - name: Check out tagged revision
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event.release.tag_name || github.ref }}
+          ref: ${{ inputs.release-tag }}
 
       - name: Import role into Ansible Galaxy
-        if: >-
-          github.event_name == 'release'
-          || github.event_name == 'workflow_dispatch' && inputs.publish-galaxy
         uses: ./.github/actions/import-galaxy-role
         with:
           role-name: ${{ inputs.galaxy-role-name || 'regolith' }}
+          git-reference: ${{ inputs.release-tag }}
         env:
           GALAXY_API_KEY: ${{ secrets.GALAXY_API_KEY }}

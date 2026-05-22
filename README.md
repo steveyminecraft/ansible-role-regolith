@@ -171,8 +171,8 @@ GitHub Actions workflows:
 |----------|---------|----------------|
 | [Unit tests](.github/workflows/unit-tests.yml) | PR, push to `main`, manual | pre-commit; `ansible-playbook` unit matrix; Galaxy metadata validation |
 | [Integration tests](.github/workflows/integration-tests.yml) | PR, push to `main`, daily cron, manual | Native container jobs (Debian bookworm/trixie, Ubuntu jammy/noble/plucky/questing) |
-| [Release Please](.github/workflows/release-please.yml) | Push to `main`, manual | Creates or updates the release PR; imports the released role into Ansible Galaxy when a release is created |
-| [Release](.github/workflows/release.yml) | Published GitHub release, manual | Imports the released role revision into Ansible Galaxy for non-Release Please or recovery releases |
+| [Release Please](.github/workflows/release-please.yml) | Push to `main`, manual | Creates or updates the release PR; imports the released tag into Ansible Galaxy when a release is created |
+| [Release](.github/workflows/release.yml) | Manual only | Recovery import of an existing semantic-version tag into Ansible Galaxy |
 | [Security scan](.github/workflows/trivy.yml) | PR, push to `main`, weekly, manual | Trivy filesystem, secret, and misconfig scan (CRITICAL/HIGH) |
 
 #### Dependency updates
@@ -182,10 +182,13 @@ GitHub Actions workflows:
 #### Ansible Galaxy
 
 1. Create a [Galaxy](https://galaxy.ansible.com) account and connect your GitHub account.
-2. Add repository secret **`GALAXY_API_KEY`** (Galaxy → Preferences → API Key).
+2. Add repository secret **`GALAXY_API_KEY`** (Galaxy → Preferences → API Key). Publication jobs fail if this secret is missing.
 3. Use Conventional Commits in merged PR titles/commits. `fix:` creates patch releases, `feat:` creates minor releases, and breaking changes create major releases.
 4. Merge the Release Please PR to create the version tag and GitHub release.
-5. When Release Please creates a release, [release-please.yml](.github/workflows/release-please.yml) imports the released revision into Ansible Galaxy. [release.yml](.github/workflows/release.yml) remains available for non-Release Please releases and manual recovery imports.
+5. When Release Please creates a release, [release-please.yml](.github/workflows/release-please.yml) checks out that tag and imports it into Ansible Galaxy with `ansible-galaxy role import --branch <tag>`. The import always targets the tagged revision, not the default `main` branch.
+6. For recovery, run [release.yml](.github/workflows/release.yml) manually and supply an existing semantic-version tag (for example `v1.2.3`). The workflow cannot publish `main` or another branch.
+
+PR validation and ordinary `main` CI runs do not import the role into Galaxy.
 
 Install after publish:
 
