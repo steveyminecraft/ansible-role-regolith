@@ -4,7 +4,7 @@ Ansible Role: regolith
 Requirements
 ------------
 
-- **ansible-core 2.20** or newer (2.20 is the supported baseline; avoid EOL 2.15–2.19).
+- **ansible-core 2.20.x** (CI validates `ansible-core>=2.20,<2.21`; newer versions are not yet in the tested matrix; avoid EOL 2.15–2.19).
 - Target host must be a [supported platform](#supported-platforms) (Ubuntu or Debian).
 - Root privileges (`become: true`) for APT repository and package changes.
 
