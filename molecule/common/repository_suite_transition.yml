@@ -11,7 +11,8 @@
     regolith_role_path: "{{ playbook_dir }}/../.."
     regolith_sources_path: /etc/apt/sources.list.d/regolith.list
     regolith_alternate_suite: preview
-    regolith_repository_update_apt_cache: false
+    # Skip apt cache refresh when exercising a synthetic suite that has no archive.
+    _regolith_repository_update_apt_cache: false
     regolith_default_suite_segment: "{{ '/' ~ regolith_repository_suite ~ ' ' }}"
     regolith_alternate_suite_segment: "{{ '/' ~ regolith_alternate_suite ~ ' ' }}"
   tasks:

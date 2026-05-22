@@ -31,5 +31,6 @@
     update_cache: true
     cache_valid_time: 0
   when:
-    - regolith_repository_update_apt_cache | default(true) | bool
+    # Internal override for integration tests with synthetic apt suites only.
+    - _regolith_repository_update_apt_cache | default(true) | bool
     - regolith_repository_file.changed or regolith_repository_keyring_copy.changed
