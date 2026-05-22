@@ -1,0 +1,53 @@
+---
+- name: Manage Regolith apt keyring
+  block:
+    - name: Create temporary file for Regolith apt key
+      ansible.builtin.tempfile:
+        state: file
+        suffix: .asc
+      register: regolith_repository_key_tempfile
+      changed_when: false
+
+    - name: Create temporary file for dearmored Regolith apt keyring
+      ansible.builtin.tempfile:
+        state: file
+        suffix: .gpg
+      register: regolith_repository_keyring_tempfile
+      changed_when: false
+
+    - name: Download Regolith apt key
+      ansible.builtin.get_url:
+        url: "{{ regolith_repository_key_url }}"
+        dest: "{{ regolith_repository_key_tempfile.path }}"
+        force: true
+        mode: "0644"
+      changed_when: false
+
+    - name: Dearmor Regolith apt key to temporary keyring
+      ansible.builtin.command:
+        cmd: >-
+          gpg --dearmor --yes --output {{ regolith_repository_keyring_tempfile.path }}
+          {{ regolith_repository_key_tempfile.path }}
+      changed_when: false
+
+    - name: Install Regolith apt keyring
+      ansible.builtin.copy:
+        src: "{{ regolith_repository_keyring_tempfile.path }}"
+        dest: "{{ regolith_repository_keyring }}"
+        mode: "0644"
+        remote_src: true
+      register: regolith_repository_keyring_copy
+  always:
+    - name: Remove temporary Regolith apt key
+      ansible.builtin.file:
+        path: "{{ regolith_repository_key_tempfile.path }}"
+        state: absent
+      changed_when: false
+      when: regolith_repository_key_tempfile.path is defined
+
+    - name: Remove temporary dearmored Regolith apt keyring
+      ansible.builtin.file:
+        path: "{{ regolith_repository_keyring_tempfile.path }}"
+        state: absent
+      changed_when: false
+      when: regolith_repository_keyring_tempfile.path is defined
