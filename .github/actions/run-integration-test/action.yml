@@ -31,3 +31,7 @@ runs:
     - name: Verify repository configuration transitions
       shell: bash
       run: ansible-playbook -i 'localhost,' -c local molecule/common/repository_transition.yml
+
+    - name: Verify repository suite transitions
+      shell: bash
+      run: ansible-playbook -i 'localhost,' -c local molecule/common/repository_suite_transition.yml
