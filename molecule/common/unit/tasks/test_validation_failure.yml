@@ -19,8 +19,15 @@
 
 - name: Validate unsupported platform fails
   block:
+    - name: Run platform validation with architecture override
+      ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/validate.yml"
+      vars:
+        regolith_repository_architecture: "{{ test_case.repository_architecture }}"
+      when: test_case.repository_architecture is defined
+
     - name: Run platform validation
       ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/validate.yml"
+      when: test_case.repository_architecture is not defined
   rescue:
     - name: Record validation failure
       ansible.builtin.set_fact:

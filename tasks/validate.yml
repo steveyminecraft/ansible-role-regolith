@@ -53,3 +53,30 @@
   ansible.builtin.set_fact:
     regolith_repository_architecture: "{{ regolith_supported_architectures[regolith_detected_architecture] }}"
   when: regolith_repository_architecture is not defined
+
+- name: Ensure repository settings are valid
+  ansible.builtin.assert:
+    that:
+      - regolith_repository_key_url is match('^https?://.+')
+      - regolith_repository_base_url is match('^https?://.+')
+      - regolith_repository_keyring | length > 0
+      - regolith_repository_suite | length > 0
+      - regolith_repository_component in ['v3.4', 'main']
+    fail_msg: >-
+      Regolith repository settings must use non-empty HTTP(S) URLs,
+      a non-empty keyring path and suite, and component v3.4 or main.
+    quiet: true
+
+- name: Ensure package selections are valid
+  ansible.builtin.assert:
+    that:
+      - regolith_repository_prerequisite_packages | type_debug == 'list'
+      - regolith_packages | type_debug == 'list'
+      - regolith_repository_prerequisite_packages | reject('string') | list | length == 0
+      - regolith_packages | reject('string') | list | length == 0
+      - regolith_repository_prerequisite_packages | select('equalto', '') | list | length == 0
+      - regolith_packages | select('equalto', '') | list | length == 0
+    fail_msg: >-
+      Regolith prerequisite and install package variables must be lists
+      containing non-empty package name strings.
+    quiet: true

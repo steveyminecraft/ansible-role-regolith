@@ -31,6 +31,8 @@ jobs:
             label: Debian bookworm
           - image: python:3.13-trixie
             label: Debian trixie
+          - image: ubuntu:22.04
+            label: Ubuntu 22.04 (jammy)
           - image: ubuntu:24.04
             label: Ubuntu 24.04 (noble)
           - image: ubuntu:25.04

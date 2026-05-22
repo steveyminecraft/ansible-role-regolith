@@ -5,11 +5,29 @@ regolith_repository_base_url: https://archive.regolith-desktop.com
 regolith_repository_suite: stable
 regolith_repository_component: v3.4
 
-regolith_packages:
+regolith_repository_prerequisite_packages:
+  - ca-certificates
+  - gnupg
+
+regolith_base_packages:
   - regolith-desktop
-  - regolith-session-flashback
-  - regolith-look-lascaille
   - xdg-desktop-portal-regolith
+
+regolith_session_packages:
+  - regolith-session-flashback
+
+regolith_look_packages:
+  - regolith-look-lascaille
+
+regolith_extra_packages: []
+
+regolith_packages: >-
+  {{
+    regolith_base_packages
+    + regolith_session_packages
+    + regolith_look_packages
+    + regolith_extra_packages
+  }}
 
 regolith_ubuntu_packages: "{{ regolith_packages }}"
 regolith_debian_packages: "{{ regolith_packages }}"

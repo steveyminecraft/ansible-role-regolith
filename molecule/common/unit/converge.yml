@@ -5,6 +5,7 @@
   gather_facts: false
   vars_files:
     - ../../../vars/main.yml
+    - ../../../defaults/main.yml
   vars:
     regolith_role_path: "{{ playbook_dir }}/../../.."
     regolith_repository_key_url: https://archive.regolith-desktop.com/regolith.key
@@ -12,13 +13,6 @@
     regolith_repository_base_url: https://archive.regolith-desktop.com
     regolith_repository_suite: stable
     regolith_repository_component: v3.4
-    regolith_packages:
-      - regolith-desktop
-      - regolith-session-flashback
-      - regolith-look-lascaille
-      - xdg-desktop-portal-regolith
-    regolith_ubuntu_packages: "{{ regolith_packages }}"
-    regolith_debian_packages: "{{ regolith_packages }}"
     regolith_validation_failure_matrix:
       - name: unsupported OS family
         os_family: RedHat
@@ -44,7 +38,17 @@
         release: noble
         architecture: riscv64
         expected_message: Got machine architecture riscv64.
+      - name: unsupported architecture override
+        os_family: Debian
+        distribution: Ubuntu
+        release: noble
+        architecture: x86_64
+        repository_architecture: ppc64le
+        expected_message: Got ppc64le.
   tasks:
+    - name: Run package selection tests
+      ansible.builtin.include_tasks: tasks/test_package_selection.yml
+
     - name: Run validation failure tests
       ansible.builtin.include_tasks: tasks/test_validation_failure.yml
       loop: "{{ regolith_validation_failure_matrix }}"
