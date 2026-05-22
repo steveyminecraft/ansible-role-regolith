@@ -1,0 +1,68 @@
+---
+name: Check Regolith stable pin (docs)
+
+on:  # yamllint disable-line rule:truthy
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-regolith-stable-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-stable-version:
+    name: Check docs stable matches pinned component
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Read pinned role component
+        id: pinned
+        run: |
+          pinned="$(awk -F': ' '/^regolith_repository_component:/{print $2; exit}' defaults/main.yml)"
+          if [ -z "$pinned" ]; then
+            echo "Could not read regolith_repository_component from defaults/main.yml" >&2
+            exit 1
+          fi
+          echo "value=$pinned" >> "$GITHUB_OUTPUT"
+
+      - name: Read latest stable from Regolith docs
+        id: docs
+        run: |
+          docs_value="$(
+            python - <<'PY'
+            import re
+            import urllib.request
+
+            url = "https://regolith-desktop.com/docs/reference/releases/"
+            with urllib.request.urlopen(url, timeout=20) as response:
+                html = response.read().decode("utf-8", "ignore")
+
+            versions = re.findall(r'(\d+\.\d+)\s+Release Notes', html)
+            if not versions:
+                raise SystemExit("Could not parse stable version from docs page")
+
+            latest = sorted(versions, key=lambda s: tuple(map(int, s.split("."))))[-1]
+            print(f"v{latest}")
+            PY
+          )"
+          echo "value=$docs_value" >> "$GITHUB_OUTPUT"
+
+      - name: Compare pinned vs docs stable
+        run: |
+          pinned="${{ steps.pinned.outputs.value }}"
+          stable="${{ steps.docs.outputs.value }}"
+
+          echo "Pinned component: $pinned"
+          echo "Docs stable: $stable"
+
+          if [ "$pinned" != "$stable" ]; then
+            echo "::error::Pinned component ($pinned) does not match docs stable ($stable)."
+            exit 1
+          fi
