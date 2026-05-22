@@ -27,3 +27,7 @@ runs:
           echo "Non-idempotent tasks detected on second converge run"
           exit 1
         fi
+
+    - name: Verify repository configuration transitions
+      shell: bash
+      run: ansible-playbook -i 'localhost,' -c local molecule/common/repository_transition.yml

@@ -1,0 +1,107 @@
+---
+- name: Verify Regolith repository configuration converges on component changes
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../../vars/main.yml
+    - ../../defaults/main.yml
+  vars:
+    regolith_role_path: "{{ playbook_dir }}/../.."
+    regolith_sources_path: /etc/apt/sources.list.d/regolith.list
+  tasks:
+    - name: Load host facts
+      ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/facts.yml"
+
+    - name: Validate supported platform
+      ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/validate.yml"
+
+    - name: Configure Regolith repository with default component
+      ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/repository.yml"
+
+    - name: Read Regolith apt sources after initial configuration
+      ansible.builtin.slurp:
+        path: "{{ regolith_sources_path }}"
+      register: regolith_sources_initial
+
+    - name: Assert initial repository uses default v3.4 component
+      ansible.builtin.assert:
+        that:
+          - regolith_active_repository_lines | length == 1
+          - regolith_active_repository_lines[0] is search('v3\.4')
+          - regolith_active_repository_lines[0] is not search('release-3_2-')
+        fail_msg: >-
+          Expected exactly one active Regolith repository line containing v3.4.
+          Got: {{ regolith_active_repository_lines }}
+      vars:
+        regolith_sources_content: "{{ regolith_sources_initial.content | b64decode }}"
+        regolith_active_repository_lines: >-
+          {{
+            regolith_sources_content.splitlines()
+            | map('trim')
+            | reject('equalto', '')
+            | reject('match', '^#')
+            | list
+          }}
+
+    - name: Reconfigure Regolith repository for main component
+      ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/repository.yml"
+      vars:
+        regolith_repository_component: main
+
+    - name: Read Regolith apt sources after component transition
+      ansible.builtin.slurp:
+        path: "{{ regolith_sources_path }}"
+      register: regolith_sources_main
+
+    - name: Assert repository transition to main leaves one active entry
+      ansible.builtin.assert:
+        that:
+          - regolith_active_repository_lines | length == 1
+          - regolith_active_repository_lines[0] is search('\\smain$')
+          - regolith_active_repository_lines[0] is not search('v3\.4')
+          - regolith_active_repository_lines[0] is not search('release-3_2-')
+        fail_msg: >-
+          Expected exactly one active Regolith repository line containing main.
+          Got: {{ regolith_active_repository_lines }}
+      vars:
+        regolith_sources_content: "{{ regolith_sources_main.content | b64decode }}"
+        regolith_active_repository_lines: >-
+          {{
+            regolith_sources_content.splitlines()
+            | map('trim')
+            | reject('equalto', '')
+            | reject('match', '^#')
+            | list
+          }}
+
+    - name: Reconfigure Regolith repository back to v3.4 component
+      ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/repository.yml"
+      vars:
+        regolith_repository_component: v3.4
+
+    - name: Read Regolith apt sources after reverse transition
+      ansible.builtin.slurp:
+        path: "{{ regolith_sources_path }}"
+      register: regolith_sources_reverted
+
+    - name: Assert reverse transition to v3.4 leaves one active entry
+      ansible.builtin.assert:
+        that:
+          - regolith_active_repository_lines | length == 1
+          - regolith_active_repository_lines[0] is search('v3\.4')
+          - regolith_active_repository_lines[0] is not search('\\smain$')
+        fail_msg: >-
+          Expected exactly one active Regolith repository line containing v3.4.
+          Got: {{ regolith_active_repository_lines }}
+      vars:
+        regolith_sources_content: "{{ regolith_sources_reverted.content | b64decode }}"
+        regolith_active_repository_lines: >-
+          {{
+            regolith_sources_content.splitlines()
+            | map('trim')
+            | reject('equalto', '')
+            | reject('match', '^#')
+            | list
+          }}

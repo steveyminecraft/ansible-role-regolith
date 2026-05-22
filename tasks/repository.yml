@@ -9,19 +9,20 @@
     update_cache: true
     cache_valid_time: 600
 
-- name: Check Regolith apt keyring
-  ansible.builtin.stat:
-    path: "{{ regolith_repository_keyring }}"
-  register: regolith_repository_keyring_stat
-
-- name: Install Regolith apt keyring
-  when: not regolith_repository_keyring_stat.stat.exists
+- name: Manage Regolith apt keyring
   block:
     - name: Create temporary file for Regolith apt key
       ansible.builtin.tempfile:
         state: file
         suffix: .asc
       register: regolith_repository_key_tempfile
+      changed_when: false
+
+    - name: Create temporary file for dearmored Regolith apt keyring
+      ansible.builtin.tempfile:
+        state: file
+        suffix: .gpg
+      register: regolith_repository_keyring_tempfile
       changed_when: false
 
     - name: Download Regolith apt key
@@ -32,12 +33,20 @@
         mode: "0644"
       changed_when: false
 
-    - name: Ensure Regolith apt key is dearmored
+    - name: Dearmor Regolith apt key to temporary keyring
       ansible.builtin.command:
         cmd: >-
-          gpg --dearmor --yes --output {{ regolith_repository_keyring }}
+          gpg --dearmor --yes --output {{ regolith_repository_keyring_tempfile.path }}
           {{ regolith_repository_key_tempfile.path }}
-      changed_when: true
+      changed_when: false
+
+    - name: Install Regolith apt keyring
+      ansible.builtin.copy:
+        src: "{{ regolith_repository_keyring_tempfile.path }}"
+        dest: "{{ regolith_repository_keyring }}"
+        mode: "0644"
+        remote_src: true
+      register: regolith_repository_keyring_copy
   always:
     - name: Remove temporary Regolith apt key
       ansible.builtin.file:
@@ -46,6 +55,13 @@
       changed_when: false
       when: regolith_repository_key_tempfile.path is defined
 
+    - name: Remove temporary dearmored Regolith apt keyring
+      ansible.builtin.file:
+        path: "{{ regolith_repository_keyring_tempfile.path }}"
+        state: absent
+      changed_when: false
+      when: regolith_repository_keyring_tempfile.path is defined
+
 - name: Ensure old Regolith repository is absent
   ansible.builtin.apt_repository:
     repo: "{{ regolith_legacy_repository }}"
@@ -53,9 +69,15 @@
     filename: regolith
     update_cache: false
 
-- name: Ensure Regolith repository is configured
-  ansible.builtin.apt_repository:
-    repo: "{{ regolith_repository }}"
-    state: present
-    filename: regolith
+- name: Ensure Regolith repository source list is configured
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/regolith.list
+    content: "{{ regolith_repository }}\n"
+    mode: "0644"
+  register: regolith_repository_file
+
+- name: Update apt cache after repository configuration changes
+  ansible.builtin.apt:
     update_cache: true
+    cache_valid_time: 0
+  when: regolith_repository_file.changed or regolith_repository_keyring_copy.changed
