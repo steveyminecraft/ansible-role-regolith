@@ -1,0 +1,108 @@
+---
+- name: Verify Regolith repository configuration converges on suite changes
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../../vars/main.yml
+    - ../../defaults/main.yml
+  vars:
+    regolith_role_path: "{{ playbook_dir }}/../.."
+    regolith_sources_path: /etc/apt/sources.list.d/regolith.list
+    regolith_alternate_suite: preview
+    regolith_repository_update_apt_cache: false
+    regolith_default_suite_segment: "{{ '/' ~ regolith_repository_suite ~ ' ' }}"
+    regolith_alternate_suite_segment: "{{ '/' ~ regolith_alternate_suite ~ ' ' }}"
+  tasks:
+    - name: Load host facts
+      ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/facts.yml"
+
+    - name: Validate supported platform
+      ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/validate.yml"
+
+    - name: Configure Regolith repository with default suite
+      ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/repository.yml"
+
+    - name: Read Regolith apt sources after initial configuration
+      ansible.builtin.slurp:
+        path: "{{ regolith_sources_path }}"
+      register: regolith_sources_initial
+
+    - name: Assert initial repository uses default stable suite
+      ansible.builtin.assert:
+        that:
+          - regolith_active_repository_lines | length == 1
+          - regolith_default_suite_segment in regolith_active_repository_lines[0]
+          - regolith_alternate_suite_segment not in regolith_active_repository_lines[0]
+        fail_msg: >-
+          Expected exactly one active Regolith repository line containing the stable suite path.
+          Got: {{ regolith_active_repository_lines }}
+      vars:
+        regolith_sources_content: "{{ regolith_sources_initial.content | b64decode }}"
+        regolith_active_repository_lines: >-
+          {{
+            regolith_sources_content.splitlines()
+            | map('trim')
+            | reject('equalto', '')
+            | reject('match', '^#')
+            | list
+          }}
+
+    - name: Reconfigure Regolith repository for alternate suite
+      ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/repository.yml"
+      vars:
+        regolith_repository_suite: "{{ regolith_alternate_suite }}"
+
+    - name: Read Regolith apt sources after suite transition
+      ansible.builtin.slurp:
+        path: "{{ regolith_sources_path }}"
+      register: regolith_sources_alternate
+
+    - name: Assert suite transition leaves one active entry with alternate suite
+      ansible.builtin.assert:
+        that:
+          - regolith_active_repository_lines | length == 1
+          - regolith_alternate_suite_segment in regolith_active_repository_lines[0]
+          - regolith_default_suite_segment not in regolith_active_repository_lines[0]
+        fail_msg: >-
+          Expected exactly one active Regolith repository line containing the {{ regolith_alternate_suite }} suite path.
+          Got: {{ regolith_active_repository_lines }}
+      vars:
+        regolith_sources_content: "{{ regolith_sources_alternate.content | b64decode }}"
+        regolith_active_repository_lines: >-
+          {{
+            regolith_sources_content.splitlines()
+            | map('trim')
+            | reject('equalto', '')
+            | reject('match', '^#')
+            | list
+          }}
+
+    - name: Reconfigure Regolith repository back to default suite
+      ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/repository.yml"
+
+    - name: Read Regolith apt sources after suite reversion
+      ansible.builtin.slurp:
+        path: "{{ regolith_sources_path }}"
+      register: regolith_sources_reverted
+
+    - name: Assert suite reversion leaves one active entry with stable suite
+      ansible.builtin.assert:
+        that:
+          - regolith_active_repository_lines | length == 1
+          - regolith_default_suite_segment in regolith_active_repository_lines[0]
+          - regolith_alternate_suite_segment not in regolith_active_repository_lines[0]
+        fail_msg: >-
+          Expected exactly one active Regolith repository line containing the stable suite path.
+          Got: {{ regolith_active_repository_lines }}
+      vars:
+        regolith_sources_content: "{{ regolith_sources_reverted.content | b64decode }}"
+        regolith_active_repository_lines: >-
+          {{
+            regolith_sources_content.splitlines()
+            | map('trim')
+            | reject('equalto', '')
+            | reject('match', '^#')
+            | list
+          }}
