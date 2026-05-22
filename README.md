@@ -164,6 +164,7 @@ yamllint .
 ```
 
 Ansible-lint uses the production profile in offline mode, excluding local caches, virtual environments, GitHub workflow files, and Molecule-generated state so local and CI runs stay deterministic.
+Yamllint follows `.yamllint`, warning on lines longer than 150 characters while ignoring local caches, virtual environments, collections, and generated Molecule Vagrant state.
 
 ### Continuous integration
 
