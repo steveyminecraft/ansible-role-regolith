@@ -36,23 +36,9 @@ jobs:
       - name: Read latest stable from Regolith docs
         id: docs
         run: |
-          docs_value="$(
-            python - <<'PY'
-            import re
-            import urllib.request
+          set -euo pipefail
 
-            url = "https://regolith-desktop.com/docs/reference/releases/"
-            with urllib.request.urlopen(url, timeout=20) as response:
-                html = response.read().decode("utf-8", "ignore")
-
-            versions = re.findall(r'(\d+\.\d+)\s+Release Notes', html)
-            if not versions:
-                raise SystemExit("Could not parse stable version from docs page")
-
-            latest = sorted(versions, key=lambda s: tuple(map(int, s.split("."))))[-1]
-            print(f"v{latest}")
-            PY
-          )"
+          docs_value="$(python -c "import re, urllib.request; url='https://regolith-desktop.com/docs/reference/releases/'; html=urllib.request.urlopen(url, timeout=20).read().decode('utf-8', 'ignore'); versions=re.findall(r'(?<![\\d.])(\\d+\\.\\d+)\\s+Release Notes', html); assert versions, 'Could not parse stable version from docs page'; latest=max(versions, key=lambda value: tuple(map(int, value.split('.')))); print(f'v{latest}')")"
           echo "value=$docs_value" >> "$GITHUB_OUTPUT"
 
       - name: Compare pinned vs docs stable
