@@ -1,33 +1,51 @@
 ---
-name: Run integration test
-description: Prepare, apply the role, verify, and check idempotence on the current container
+name: Import role to Ansible Galaxy
+description: Import this repository as a legacy role on Ansible Galaxy
+
+inputs:
+  git-reference:
+    description: Existing Git tag to import into Ansible Galaxy, for example v1.2.3
+    required: true
+  role-name:
+    description: Galaxy role name
+    required: false
+    default: regolith
 
 runs:
   using: composite
   steps:
-    - name: Prepare container
-      shell: bash
-      run: ansible-playbook -i 'localhost,' -c local molecule/common/docker_prepare.yml
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.13"
 
-    - name: Apply role
+    - name: Install Ansible
       shell: bash
-      run: ansible-playbook -i 'localhost,' -c local molecule/common/converge.yml
+      run: python -m pip install 'ansible-core>=2.20,<2.21'
 
-    - name: Verify installation
+    - name: Import role into Ansible Galaxy
       shell: bash
-      run: ansible-playbook -i 'localhost,' -c local molecule/default/verify.yml
-
-    - name: Check idempotence
-      shell: bash
+      env:
+        GALAXY_API_KEY: ${{ env.GALAXY_API_KEY }}
+        GIT_REFERENCE: ${{ inputs.git-reference }}
       run: |
-        set -o pipefail
-        output="$(ansible-playbook -i 'localhost,' -c local molecule/common/converge.yml 2>&1 | tee /dev/stderr)"
-        recap="$(printf '%s\n' "$output" | sed -n '/PLAY RECAP/,$p')"
-        if printf '%s\n' "$recap" | grep -qE '[[:space:]]changed=[1-9][0-9]*'; then
-          echo "Non-idempotent tasks detected on second converge run"
+        set -euo pipefail
+        if [ -z "${GALAXY_API_KEY:-}" ]; then
+          echo "GALAXY_API_KEY is required for Ansible Galaxy publication."
           exit 1
         fi
 
-    - name: Verify repository configuration transitions
-      shell: bash
-      run: ansible-playbook -i 'localhost,' -c local molecule/common/repository_transition.yml
+        case "${GIT_REFERENCE}" in
+          v[0-9]*.[0-9]*.[0-9]*) ;;
+          *)
+            echo "git-reference must be a semantic version tag such as v1.2.3."
+            exit 1
+            ;;
+        esac
+
+        ansible-galaxy role import \
+          --api-key "${GALAXY_API_KEY}" \
+          --branch "${GIT_REFERENCE}" \
+          --role-name "${{ inputs.role-name }}" \
+          "${GITHUB_REPOSITORY_OWNER}" \
+          "${GITHUB_REPOSITORY#*/}"
