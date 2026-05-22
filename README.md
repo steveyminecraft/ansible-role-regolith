@@ -36,7 +36,8 @@ regolith_repository_keyring: /usr/share/keyrings/regolith-archive-keyring.gpg
 regolith_repository_base_url: https://archive.regolith-desktop.com
 regolith_repository_suite: stable
 regolith_repository_component: v3.4
-# regolith_repository_architecture is auto-detected from ansible_facts in tasks/facts.yml
+# regolith_repository_architecture is auto-detected from host facts when omitted.
+# Set it only when it matches the host (amd64 or arm64); cross-arch/multiarch is not supported.
 
 regolith_repository_prerequisite_packages:
   - ca-certificates

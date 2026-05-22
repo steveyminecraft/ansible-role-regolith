@@ -37,7 +37,7 @@
         distribution: Ubuntu
         release: noble
         architecture: riscv64
-        expected_message: Got machine architecture riscv64.
+        expected_message: Got riscv64.
       - name: unsupported architecture override
         os_family: Debian
         distribution: Ubuntu
@@ -45,6 +45,42 @@
         architecture: x86_64
         repository_architecture: ppc64le
         expected_message: Got ppc64le.
+      - name: mismatched amd64 host with arm64 override
+        os_family: Debian
+        distribution: Ubuntu
+        release: noble
+        architecture: x86_64
+        repository_architecture: arm64
+        expected_message: Cross-architecture installation is not supported by this role.
+      - name: mismatched arm64 host with amd64 override
+        os_family: Debian
+        distribution: Ubuntu
+        release: noble
+        architecture: aarch64
+        repository_architecture: amd64
+        expected_message: Cross-architecture installation is not supported by this role.
+      - name: riscv64 host with nominal amd64 override
+        os_family: Debian
+        distribution: Ubuntu
+        release: noble
+        architecture: riscv64
+        repository_architecture: amd64
+        expected_message: Got riscv64.
+    regolith_architecture_success_matrix:
+      - name: auto-detect amd64 on x86_64
+        architecture: x86_64
+        expected_arch: amd64
+      - name: auto-detect arm64 on aarch64
+        architecture: aarch64
+        expected_arch: arm64
+      - name: matching amd64 override on x86_64
+        architecture: x86_64
+        repository_architecture: amd64
+        expected_arch: amd64
+      - name: matching arm64 override on aarch64
+        architecture: aarch64
+        repository_architecture: arm64
+        expected_arch: arm64
   tasks:
     - name: Run package selection tests
       ansible.builtin.include_tasks: tasks/test_package_selection.yml
@@ -55,6 +91,9 @@
       loop_control:
         loop_var: test_case
         label: "{{ test_case.name }}"
+
+    - name: Run architecture validation tests
+      ansible.builtin.include_tasks: tasks/test_architecture_validation.yml
 
     - name: Run repository fact tests
       ansible.builtin.include_tasks: tasks/test_repository_facts.yml

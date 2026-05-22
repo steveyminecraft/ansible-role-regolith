@@ -1,0 +1,7 @@
+---
+- name: Run architecture validation success case
+  ansible.builtin.include_tasks: tasks/test_architecture_validation_case.yml
+  loop: "{{ regolith_architecture_success_matrix }}"
+  loop_control:
+    loop_var: test_case
+    label: "{{ test_case.name }}"

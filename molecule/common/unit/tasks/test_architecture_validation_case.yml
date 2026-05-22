@@ -1,0 +1,29 @@
+---
+- name: Set architecture validation test host facts
+  ansible.builtin.set_fact:
+    ansible_facts: >-
+      {{
+        ansible_facts | default({})
+        | combine({
+            'os_family': 'Debian',
+            'distribution': 'Ubuntu',
+            'distribution_release': 'noble',
+            'architecture': test_case.architecture,
+          }, recursive=True)
+      }}
+    regolith_repository_architecture: "{{ test_case.repository_architecture | default('') }}"
+
+- name: Load host facts for architecture validation test
+  ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/facts.yml"
+
+- name: Run platform validation for architecture test
+  ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/validate.yml"
+
+- name: Assert resolved repository architecture matches expectation
+  ansible.builtin.assert:
+    that:
+      - regolith_repository_architecture == test_case.expected_arch
+    fail_msg: >-
+      Architecture case {{ test_case.name }} resolved to
+      {{ regolith_repository_architecture | default('undefined') }},
+      expected {{ test_case.expected_arch }}.

@@ -36,23 +36,34 @@
       {{ regolith_supported_architectures.values() | unique | join(', ') }}.
       Got {{ regolith_repository_architecture | default('unknown') }}.
     quiet: true
-  when: regolith_repository_architecture is defined
+  when: regolith_repository_architecture | default('') | length > 0
 
-- name: Ensure detected architecture is supported
+- name: Ensure detected architecture is supported for all installs
   ansible.builtin.assert:
     that:
       - regolith_detected_architecture in regolith_supported_architectures
     fail_msg: >-
-      Regolith role supports repository architectures
-      {{ regolith_supported_architectures.values() | unique | join(', ') }} only.
-      Got machine architecture {{ regolith_detected_architecture | default('unknown') }}.
+      Regolith role supports detected machine architectures
+      {{ regolith_supported_architectures.keys() | join(', ') }} only.
+      Got {{ regolith_detected_architecture | default('unknown') }}.
     quiet: true
-  when: regolith_repository_architecture is not defined
+
+- name: Ensure repository architecture override matches the detected host
+  ansible.builtin.assert:
+    that:
+      - regolith_repository_architecture == regolith_supported_architectures[regolith_detected_architecture]
+    fail_msg: >-
+      Requested repository architecture {{ regolith_repository_architecture }}
+      does not match detected host architecture {{ regolith_detected_architecture }}
+      (expected {{ regolith_supported_architectures[regolith_detected_architecture] }}).
+      Cross-architecture installation is not supported by this role.
+    quiet: true
+  when: regolith_repository_architecture | default('') | length > 0
 
 - name: Set detected repository architecture
   ansible.builtin.set_fact:
     regolith_repository_architecture: "{{ regolith_supported_architectures[regolith_detected_architecture] }}"
-  when: regolith_repository_architecture is not defined
+  when: regolith_repository_architecture | default('') | length == 0
 
 - name: Ensure repository settings are valid
   ansible.builtin.assert:
