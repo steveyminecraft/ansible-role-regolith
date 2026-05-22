@@ -17,6 +17,15 @@
   vars:
     regolith_repository_architecture: "{{ test_case.expected_arch }}"
 
+- name: Validate supported platform
+  ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/validate.yml"
+  vars:
+    regolith_repository_architecture: "{{ test_case.expected_arch }}"
+
+- name: Set repository architecture override for repository facts
+  ansible.builtin.set_fact:
+    regolith_repository_architecture: "{{ test_case.expected_arch }}"
+
 - name: Define Regolith repository facts
   ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/repository_facts.yml"
 

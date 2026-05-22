@@ -1,0 +1,38 @@
+---
+- name: Set validation test host facts
+  ansible.builtin.set_fact:
+    ansible_facts: >-
+      {{
+        ansible_facts | default({})
+        | combine({
+            'os_family': test_case.os_family,
+            'distribution': test_case.distribution,
+            'distribution_release': test_case.release,
+            'architecture': test_case.architecture,
+          }, recursive=True)
+      }}
+    regolith_validation_failed: false
+    regolith_validation_failure_msg: ""
+
+- name: Load host facts for validation test
+  ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/facts.yml"
+
+- name: Validate unsupported platform fails
+  block:
+    - name: Run platform validation
+      ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/validate.yml"
+  rescue:
+    - name: Record validation failure
+      ansible.builtin.set_fact:
+        regolith_validation_failed: true
+        regolith_validation_failure_msg: "{{ ansible_failed_result.msg }}"
+
+- name: Assert validation failed with expected message
+  ansible.builtin.assert:
+    that:
+      - regolith_validation_failed
+      - test_case.expected_message in regolith_validation_failure_msg
+    fail_msg: >-
+      Validation case {{ test_case.name }} did not fail as expected.
+      Expected message fragment: {{ test_case.expected_message }}
+      Actual message: {{ regolith_validation_failure_msg | default('none') }}

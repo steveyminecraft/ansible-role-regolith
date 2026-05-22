@@ -5,13 +5,14 @@ Requirements
 ------------
 
 - **ansible-core 2.20** or newer (2.20 is the supported baseline; avoid EOL 2.15–2.19).
-- Target host must be a [supported platform](#supported-platforms) (Debian family).
+- Target host must be a [supported platform](#supported-platforms) (Ubuntu or Debian).
 - Root privileges (`become: true`) for APT repository and package changes.
 
 Supported platforms
 -------------------
 
 This role follows the [Regolith install documentation](https://regolith-desktop.com/docs/using-regolith/install/).
+Only the Ubuntu and Debian distributions listed below are supported; Debian-family derivatives are rejected during validation.
 
 | Distribution | Release (codename) | Version |
 |--------------|-------------------|---------|
@@ -22,7 +23,7 @@ This role follows the [Regolith install documentation](https://regolith-desktop.
 | Debian | bookworm | 12 |
 | Debian | trixie | 13 |
 
-Unsupported distributions or releases fail during role validation with a clear error message.
+Unsupported operating systems, Debian-family derivatives, distributions, releases, or architectures fail during role validation with a clear error message.
 
 Role Variables
 --------------

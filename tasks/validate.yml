@@ -1,10 +1,19 @@
 ---
+- name: Ensure operating system family is supported
+  ansible.builtin.assert:
+    that:
+      - regolith_os_family == "Debian"
+    fail_msg: >-
+      Regolith role supports Ubuntu and Debian systems only.
+      Got OS family {{ regolith_os_family | default('unknown') }}.
+    quiet: true
+
 - name: Ensure distribution is supported
   ansible.builtin.assert:
     that:
       - regolith_distribution in regolith_supported_distributions
     fail_msg: >-
-      Regolith role supports {{ regolith_supported_distributions | dict2items | map(attribute='key') | join(', ') }}.
+      Regolith role supports Ubuntu and Debian only.
       Got unsupported distribution {{ regolith_distribution | default('unknown') }}.
     quiet: true
 
@@ -17,3 +26,30 @@
       releases {{ regolith_supported_distributions[regolith_distribution] | join(', ') }}.
       Got unsupported release {{ regolith_distribution_release | default('unknown') }}.
     quiet: true
+
+- name: Ensure repository architecture override is supported
+  ansible.builtin.assert:
+    that:
+      - regolith_repository_architecture in regolith_supported_architectures.values()
+    fail_msg: >-
+      Regolith repository architecture must be one of
+      {{ regolith_supported_architectures.values() | unique | join(', ') }}.
+      Got {{ regolith_repository_architecture | default('unknown') }}.
+    quiet: true
+  when: regolith_repository_architecture is defined
+
+- name: Ensure detected architecture is supported
+  ansible.builtin.assert:
+    that:
+      - regolith_detected_architecture in regolith_supported_architectures
+    fail_msg: >-
+      Regolith role supports repository architectures
+      {{ regolith_supported_architectures.values() | unique | join(', ') }} only.
+      Got machine architecture {{ regolith_detected_architecture | default('unknown') }}.
+    quiet: true
+  when: regolith_repository_architecture is not defined
+
+- name: Set detected repository architecture
+  ansible.builtin.set_fact:
+    regolith_repository_architecture: "{{ regolith_supported_architectures[regolith_detected_architecture] }}"
+  when: regolith_repository_architecture is not defined

@@ -1,17 +1,14 @@
 ---
-- name: Install Regolith desktop
-  when: ansible_facts.os_family == "Debian"
-  block:
-    - name: Load host facts
-      ansible.builtin.include_tasks: facts.yml
+- name: Load host facts
+  ansible.builtin.include_tasks: facts.yml
 
-    - name: Validate supported platform
-      ansible.builtin.include_tasks: validate.yml
+- name: Validate supported platform
+  ansible.builtin.include_tasks: validate.yml
 
-    - name: Configure Regolith repository
-      ansible.builtin.include_tasks: repository.yml
-      tags:
-        - repository
+- name: Configure Regolith repository
+  ansible.builtin.include_tasks: repository.yml
+  tags:
+    - repository
 
-    - name: Install Regolith packages
-      ansible.builtin.include_tasks: install.yml
+- name: Install Regolith packages
+  ansible.builtin.include_tasks: install.yml
