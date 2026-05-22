@@ -18,6 +18,7 @@ jobs:
   check-stable-version:
     name: Check docs stable matches pinned component
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
 
     steps:
       - name: Check out repository
@@ -25,7 +26,10 @@ jobs:
 
       - name: Read pinned role component
         id: pinned
+        shell: bash
         run: |
+          set -euo pipefail
+
           pinned="$(awk -F': ' '/^regolith_repository_component:/{print $2; exit}' defaults/main.yml)"
           if [ -z "$pinned" ]; then
             echo "Could not read regolith_repository_component from defaults/main.yml" >&2
@@ -35,21 +39,36 @@ jobs:
 
       - name: Read latest stable from Regolith docs
         id: docs
+        shell: bash
         run: |
+          set -euo pipefail
+
           docs_value="$(
             python - <<'PY'
             import re
             import urllib.request
 
             url = "https://regolith-desktop.com/docs/reference/releases/"
-            with urllib.request.urlopen(url, timeout=20) as response:
+
+            request = urllib.request.Request(
+                url,
+                headers={"User-Agent": "ansible-role-regolith-version-check"},
+            )
+
+            with urllib.request.urlopen(request, timeout=20) as response:
                 html = response.read().decode("utf-8", "ignore")
 
-            versions = re.findall(r'(\d+\.\d+)\s+Release Notes', html)
+            versions = re.findall(
+                r'(?<![\d.])(\d+\.\d+)\s+Release Notes',
+                html,
+            )
             if not versions:
                 raise SystemExit("Could not parse stable version from docs page")
 
-            latest = sorted(versions, key=lambda s: tuple(map(int, s.split("."))))[-1]
+            latest = max(
+                versions,
+                key=lambda version: tuple(map(int, version.split("."))),
+            )
             print(f"v{latest}")
             PY
           )"
@@ -57,14 +76,17 @@ jobs:
 
       - name: Compare pinned vs docs stable
         id: compare
+        shell: bash
+        env:
+          PINNED: ${{ steps.pinned.outputs.value }}
+          STABLE: ${{ steps.docs.outputs.value }}
         run: |
-          pinned="${{ steps.pinned.outputs.value }}"
-          stable="${{ steps.docs.outputs.value }}"
+          set -euo pipefail
 
-          echo "Pinned component: $pinned"
-          echo "Docs stable: $stable"
+          echo "Pinned component: $PINNED"
+          echo "Docs stable: $STABLE"
 
-          if [ "$pinned" != "$stable" ]; then
+          if [ "$PINNED" != "$STABLE" ]; then
             echo "mismatch=true" >> "$GITHUB_OUTPUT"
           else
             echo "mismatch=false" >> "$GITHUB_OUTPUT"
@@ -72,24 +94,29 @@ jobs:
 
       - name: Open issue when mismatch is detected
         if: steps.compare.outputs.mismatch == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
+        env:
+          PINNED: ${{ steps.pinned.outputs.value }}
+          STABLE: ${{ steps.docs.outputs.value }}
         with:
           script: |
-            const pinned = `${{ steps.pinned.outputs.value }}`;
-            const stable = `${{ steps.docs.outputs.value }}`;
+            const pinned = process.env.PINNED;
+            const stable = process.env.STABLE;
             const label = "regolith-stable-drift";
             const title = `Regolith stable drift: pinned ${pinned} vs docs ${stable}`;
 
             const { owner, repo } = context.repo;
 
-            const labelsResp = await github.rest.issues.listLabelsOnRepo({
-              owner,
-              repo,
-              per_page: 100,
-            });
-
-            const hasLabel = labelsResp.data.some((entry) => entry.name === label);
-            if (!hasLabel) {
+            try {
+              await github.rest.issues.getLabel({
+                owner,
+                repo,
+                name: label,
+              });
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
               await github.rest.issues.createLabel({
                 owner,
                 repo,
@@ -99,7 +126,7 @@ jobs:
               });
             }
 
-            const openIssues = await github.rest.issues.listForRepo({
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
               owner,
               repo,
               state: "open",
@@ -107,7 +134,7 @@ jobs:
               per_page: 100,
             });
 
-            const existing = openIssues.data.find((issue) => issue.title === title);
+            const existing = openIssues.find((issue) => issue.title === title);
             if (existing) {
               core.info(`Matching open issue already exists: #${existing.number}`);
               return;
@@ -117,12 +144,12 @@ jobs:
               "The scheduled docs-based stable version check detected drift.",
               "",
               `- pinned in \`defaults/main.yml\`: \`${pinned}\``,
-              `- stable from https://regolith-desktop.com/docs/reference/releases/: \`${stable}\``,
+              `- stable from the Regolith releases documentation: \`${stable}\``,
               "",
               "Please update:",
               "- `defaults/main.yml` (`regolith_repository_component`)",
-              "- `meta/argument_specs.yml` choices (if needed)",
-              "- related README text when appropriate",
+              "- `meta/argument_specs.yml` choices, if needed",
+              "- related README text, when appropriate",
             ].join("\n");
 
             await github.rest.issues.create({
@@ -135,6 +162,9 @@ jobs:
 
       - name: Fail workflow on mismatch
         if: steps.compare.outputs.mismatch == 'true'
+        env:
+          PINNED: ${{ steps.pinned.outputs.value }}
+          STABLE: ${{ steps.docs.outputs.value }}
         run: |
-          echo "::error::Pinned component (${{ steps.pinned.outputs.value }}) does not match docs stable (${{ steps.docs.outputs.value }})."
+          echo "::error::Pinned component ($PINNED) does not match docs stable ($STABLE)."
           exit 1
