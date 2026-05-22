@@ -163,6 +163,8 @@ ansible-lint
 yamllint .
 ```
 
+Ansible-lint uses the production profile in offline mode, excluding local caches, virtual environments, GitHub workflow files, and Molecule-generated state so local and CI runs stay deterministic.
+
 ### Continuous integration
 
 GitHub Actions workflows:
