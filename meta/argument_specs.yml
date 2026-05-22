@@ -45,6 +45,8 @@ argument_specs:
         description:
           - Optional repository architecture override.
           - When omitted, the role detects C(amd64) or C(arm64) from host facts.
+          - When set, the value must match the detected host architecture.
+          - Cross-architecture or multiarch installation is not supported.
       regolith_repository_prerequisite_packages:
         type: list
         elements: str
