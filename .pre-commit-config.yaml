@@ -30,6 +30,11 @@ repos:
         id: yamllint
   - repo: local
     hooks:
+      - id: validate-release-workflows
+        name: Validate release workflow contracts
+        entry: bash tests/validate-release-workflows.sh
+        language: system
+        pass_filenames: false
       - id: ansible-lint
         name: Ansible-lint
         entry: ansible-lint
