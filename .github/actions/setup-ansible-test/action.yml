@@ -29,7 +29,14 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        "${ANSIBLE_PYTHON}" -m venv "${{ github.workspace }}/.ci-venv"
+        if ! "${ANSIBLE_PYTHON}" -m venv "${{ github.workspace }}/.ci-venv"; then
+          if command -v apt-get >/dev/null 2>&1; then
+            DEBIAN_FRONTEND=noninteractive apt-get install -y "${ANSIBLE_PYTHON}-venv"
+            "${ANSIBLE_PYTHON}" -m venv "${{ github.workspace }}/.ci-venv"
+          else
+            exit 1
+          fi
+        fi
         "${{ github.workspace }}/.ci-venv/bin/pip" install \
           -r "${{ inputs.requirements-file }}"
         echo "${{ github.workspace }}/.ci-venv/bin" >> "${GITHUB_PATH}"
