@@ -1,6 +1,0 @@
-{
-  "files.associations": {
-    "*.yml": "ansible"
-  },
-  "ansible.python.interpreterPath": "/home/linuxbrew/.linuxbrew/bin/python3"
-}

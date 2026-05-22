@@ -5,6 +5,10 @@ venv
 .ansible/
 **/.vagrant/
 importer_result.json
+AGENTS.md
+.agents/
+.editorconfig
+.vscode/
 .codex/
 .cursor/
 env/
