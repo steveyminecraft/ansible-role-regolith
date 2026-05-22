@@ -163,6 +163,8 @@ ansible-lint
 yamllint .
 ```
 
+Yamllint follows `.yamllint`, warning on lines longer than 150 characters while ignoring local caches, virtual environments, collections, and generated Molecule Vagrant state.
+
 ### Continuous integration
 
 GitHub Actions workflows:
