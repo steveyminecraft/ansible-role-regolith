@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.3](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.5.2...v3.5.3) (2026-05-22)
+
+
+### Bug Fixes
+
+* avoid heredoc EOF failure in stable docs check ([#27](https://github.com/steveyminecraft/ansible-role-regolith/issues/27)) ([fb18293](https://github.com/steveyminecraft/ansible-role-regolith/commit/fb18293d50c374495755e4c743d4bdfd05b89a2a))
+
 ## [3.5.2](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.5.1...v3.5.2) (2026-05-22)
 
 
