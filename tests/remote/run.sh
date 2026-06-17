@@ -124,9 +124,9 @@ run_hook idempotence "${REMOTE_IDEMPOTENCE_COMMAND:-}"
 if ! $skip_converge; then
   echo "Re-applying role to verify idempotence."
   json_output="${RUNNER_TEMP:-/tmp}/regolith-remote-idempotence.json"
-  ansible-playbook -i "$inventory" tests/remote/playbooks/bootstrap-regolith.yml \
-    -e ansible_stdout_callback=ansible.builtin.json \
-    > "${json_output}"
+  ANSIBLE_STDOUT_CALLBACK=ansible.builtin.json \
+    ansible-playbook -i "$inventory" tests/remote/playbooks/bootstrap-regolith.yml \
+    > "${json_output}" 2>"${json_output}.stderr"
   python3 scripts/check-playbook-idempotence.py "${json_output}"
 fi
 

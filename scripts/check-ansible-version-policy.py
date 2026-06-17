@@ -22,7 +22,7 @@ def main() -> None:
     require(".github/actions/setup-ansible-test/action.yml", "ansible-core 2.20")
     require(".github/actions/import-galaxy-role/action.yml", POLICY)
     require(".github/workflows/unit-tests.yml", "setup-ansible-test")
-    require("meta/runtime.yml", 'requires_ansible: ">=2.20.0"')
+    require("meta/main.yml", 'min_ansible_version: "2.20"')
     print("Ansible Core support policy is aligned.")
 
 
