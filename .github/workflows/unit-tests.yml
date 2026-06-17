@@ -71,9 +71,12 @@ jobs:
           from pathlib import Path
           import yaml
 
-          required_keys = ["dependency", "driver", "platforms", "provisioner", "scenario"]
           for path in sorted(Path("molecule").glob("*/molecule.yml")):
               data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+              driver = (data.get("driver") or {}).get("name")
+              required_keys = ["driver", "platforms", "provisioner", "scenario"]
+              if driver != "vagrant":
+                  required_keys = ["dependency", *required_keys]
               missing = [key for key in required_keys if key not in data]
               if missing:
                   raise SystemExit(f"{path} missing keys: {missing}")
