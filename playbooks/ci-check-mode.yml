@@ -1,0 +1,31 @@
+---
+- name: CI check-mode validation for Regolith role
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../vars/main.yml
+    - ../defaults/main.yml
+  vars:
+    regolith_role_path: "{{ playbook_dir }}/.."
+    ansible_facts:
+      os_family: Debian
+      distribution: Ubuntu
+      distribution_release: noble
+      architecture: x86_64
+  tasks:
+    - name: Load host facts
+      ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/facts.yml"
+
+    - name: Validate supported platform
+      ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/validate.yml"
+
+    - name: Define repository facts
+      ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/repository_facts.yml"
+
+    - name: Assert repository line was generated
+      ansible.builtin.assert:
+        that:
+          - regolith_repository is defined
+          - regolith_repository | length > 0
+          - regolith_legacy_repository is defined

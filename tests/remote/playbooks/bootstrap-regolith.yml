@@ -1,0 +1,6 @@
+---
+- name: Bootstrap Regolith on remote host
+  hosts: all
+  become: true
+  roles:
+    - role: "{{ playbook_dir }}/../../.."

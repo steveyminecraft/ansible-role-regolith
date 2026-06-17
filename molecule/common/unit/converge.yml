@@ -97,6 +97,9 @@
     - name: Run package selection tests
       ansible.builtin.include_tasks: tasks/test_package_selection.yml
 
+    - name: Run distribution package path tests
+      ansible.builtin.include_tasks: tasks/test_distribution_packages.yml
+
     - name: Run validation failure tests
       ansible.builtin.include_tasks: tasks/test_validation_failure.yml
       loop: "{{ regolith_validation_failure_matrix }}"

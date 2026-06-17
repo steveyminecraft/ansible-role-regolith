@@ -115,6 +115,16 @@ ansible-playbook molecule/unit-ubuntu-plucky/converge.yml
 ansible-playbook molecule/unit-ubuntu-questing/converge.yml
 ```
 
+Python policy and script unit tests:
+
+```bash
+python -m pip install pyyaml
+python -m unittest discover -s tests/unit -p 'test_*.py'
+python scripts/validate-role-defaults.py
+python scripts/check-ansible-version-policy.py
+ansible-playbook -i inventory/ci/ci.yml playbooks/ci-check-mode.yml --check
+```
+
 Integration tests (Docker container, same steps as CI):
 
 ```bash
@@ -132,9 +142,9 @@ Optional Molecule wrappers (local development):
 
 ```bash
 pip install -r requirements.txt
+./scripts/molecule-test-all --list
+./scripts/molecule-test-all debian-bookworm ubuntu-noble
 molecule test -s unit
-molecule test -s debian-bookworm
-molecule test -s ubuntu-noble
 ```
 
 Optional Vagrant integration (Ubuntu 24.04 noble):
@@ -166,16 +176,28 @@ yamllint .
 Ansible-lint uses the production profile in offline mode, excluding local caches, virtual environments, GitHub workflow files, and Molecule-generated state so local and CI runs stay deterministic.
 Yamllint follows `.yamllint`, warning on lines longer than 150 characters while ignoring local caches, virtual environments, collections, and generated Molecule Vagrant state.
 
+### Test layers
+
+| Layer | Command | CI workflow |
+|-------|---------|-------------|
+| Python unit / policy | `python -m unittest discover -s tests/unit` | [Unit tests](.github/workflows/unit-tests.yml) `policy` job |
+| Ansible static | `ansible-playbook -i inventory/ci/ci.yml playbooks/ci-check-mode.yml --check` | Unit tests `lint` job |
+| Ansible unit | `ansible-playbook molecule/unit/converge.yml` | Unit tests `unit` matrix |
+| Docker integration | Molecule / container jobs | [Integration tests](.github/workflows/integration-tests.yml) |
+| AWS remote | `tests/remote/run.sh` | [RC AWS tests](.github/workflows/rc-aws-remote-tests.yml), [manual AWS tests](.github/workflows/aws-remote-tests.yml) |
+
 ### Continuous integration
 
 GitHub Actions workflows:
 
 | Workflow | Trigger | What it runs |
 |----------|---------|----------------|
-| [Unit tests](.github/workflows/unit-tests.yml) | PR, push to `main`, manual | pre-commit; `ansible-playbook` unit matrix; Galaxy metadata validation |
+| [Unit tests](.github/workflows/unit-tests.yml) | PR, push to `main`, manual | pre-commit; policy scripts; `ansible-playbook` unit matrix; Galaxy metadata validation |
 | [Integration tests](.github/workflows/integration-tests.yml) | PR, push to `main`, daily cron, manual | Native container jobs (Debian bookworm/trixie, Ubuntu jammy/noble/plucky/questing) |
+| [AWS RC remote tests](.github/workflows/rc-aws-remote-tests.yml) | `v*-rc*` tags, manual | Ephemeral EC2 apply + verify + teardown |
+| [AWS remote tests](.github/workflows/aws-remote-tests.yml) | Manual | On-demand ephemeral EC2 matrix |
 | [Check Regolith stable pin (docs)](.github/workflows/check-regolith-stable.yml) | Daily cron, manual | Compares `defaults/main.yml` pinned component with the latest stable release listed on Regolith docs, opens a drift issue, and fails on mismatch |
-| [Release Please](.github/workflows/release-please.yml) | Push to `main`, manual | Creates or updates the release PR; imports the released tag into Ansible Galaxy when a release is created |
+| [Release Please](.github/workflows/release-please.yml) | Push to `main`, manual | Release PR, RC tags for AWS tests, Galaxy import on release |
 | [Release](.github/workflows/release.yml) | Manual only | Recovery import of an existing semantic-version tag into Ansible Galaxy |
 | [Security scan](.github/workflows/trivy.yml) | PR, push to `main`, weekly, manual | Trivy filesystem, secret, and misconfig scan (CRITICAL/HIGH) |
 

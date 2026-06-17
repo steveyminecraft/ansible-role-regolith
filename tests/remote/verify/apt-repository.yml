@@ -1,0 +1,37 @@
+---
+- name: Verify Regolith APT repository configuration
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Check modern Regolith sources list entry exists
+      ansible.builtin.stat:
+        path: /etc/apt/sources.list.d/regolith.list
+      register: regolith_sources_list
+
+    - name: Assert modern Regolith sources list is present
+      ansible.builtin.assert:
+        that:
+          - regolith_sources_list.stat.exists
+          - regolith_sources_list.stat.isreg
+
+    - name: Read modern Regolith sources list
+      ansible.builtin.slurp:
+        src: /etc/apt/sources.list.d/regolith.list
+      register: regolith_sources_content
+
+    - name: Assert keyring-backed archive line is configured
+      ansible.builtin.assert:
+        that:
+          - "'signed-by=' in (regolith_sources_content.content | b64decode)"
+          - "'archive.regolith-desktop.com' in (regolith_sources_content.content | b64decode)"
+
+    - name: Check Regolith keyring file exists
+      ansible.builtin.stat:
+        path: "{{ regolith_repository_keyring | default('/usr/share/keyrings/regolith-archive-keyring.gpg') }}"
+      register: regolith_keyring_file
+
+    - name: Assert Regolith keyring is installed
+      ansible.builtin.assert:
+        that:
+          - regolith_keyring_file.stat.exists
+          - regolith_keyring_file.stat.isreg
