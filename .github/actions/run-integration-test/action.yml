@@ -21,7 +21,8 @@ runs:
       shell: bash
       run: |
         set -o pipefail
-        json_output="${RUNNER_TEMP:-/tmp}/regolith-idempotence.json"
+        # RUNNER_TEMP points at the host filesystem and is not mounted in container jobs.
+        json_output="${GITHUB_WORKSPACE}/.regolith-idempotence.json"
         ANSIBLE_STDOUT_CALLBACK=ansible.builtin.json \
           ansible-playbook -i 'localhost,' -c local molecule/common/converge.yml \
           > "${json_output}" 2>"${json_output}.stderr"
