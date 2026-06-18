@@ -93,6 +93,9 @@ jobs:
     runs-on: ubuntu-24.04
     needs: release-please
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    permissions:
+      contents: read
+      actions: read
 
     steps:
       - name: Check out released revision
@@ -100,6 +103,12 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ needs.release-please.outputs.tag_name }}
+
+      - name: Verify AWS RC tests passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: python3 scripts/verify_aws_rc_gate.py --release-tag "${RELEASE_TAG}"
 
       - name: Import role into Ansible Galaxy
         uses: ./.github/actions/import-galaxy-role
