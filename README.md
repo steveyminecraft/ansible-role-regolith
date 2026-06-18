@@ -115,7 +115,7 @@ ansible-playbook molecule/unit-ubuntu-plucky/converge.yml
 ansible-playbook molecule/unit-ubuntu-questing/converge.yml
 ```
 
-Python policy and script unit tests:
+Python policy and script unit tests (see [Unit tests workflow](#unit-tests-workflow) for CI job detail):
 
 ```bash
 python -m pip install pyyaml
@@ -176,30 +176,149 @@ yamllint .
 Ansible-lint uses the production profile in offline mode, excluding local caches, virtual environments, GitHub workflow files, and Molecule-generated state so local and CI runs stay deterministic.
 Yamllint follows `.yamllint`, warning on lines longer than 150 characters while ignoring local caches, virtual environments, collections, and generated Molecule Vagrant state.
 
-### Test layers
+### Test pyramid
 
-| Layer | Command | CI workflow |
-|-------|---------|-------------|
-| Python unit / policy | `python -m unittest discover -s tests/unit` | [Unit tests](.github/workflows/unit-tests.yml) `policy` job |
-| Ansible static | `ansible-playbook -i inventory/ci/ci.yml playbooks/ci-check-mode.yml --check` | Unit tests `lint` job |
-| Ansible unit | `ansible-playbook molecule/unit/converge.yml` | Unit tests `unit` matrix |
-| Docker integration | Molecule / container jobs | [Integration tests](.github/workflows/integration-tests.yml) |
-| AWS remote | `tests/remote/run.sh` | [RC AWS tests](.github/workflows/rc-aws-remote-tests.yml), [manual AWS tests](.github/workflows/aws-remote-tests.yml) |
+Tests run in layers from fast/cheap to slow/realistic. Feature-branch PRs exercise every layer **except AWS**. AWS RC tests run only on the Release Please PR after merge to `main`.
 
-### Continuous integration
+| Layer | What it validates | CI workflow |
+|-------|-------------------|-------------|
+| Lint & static | Style, syntax, check-mode, workflow contracts | [Unit tests](.github/workflows/unit-tests.yml) → `lint` |
+| Python policy | Defaults, Ansible version policy, docs parser, AWS platform map | [Unit tests](.github/workflows/unit-tests.yml) → `policy` |
+| Ansible unit | Role logic with synthetic facts (no apt/VM) | [Unit tests](.github/workflows/unit-tests.yml) → `unit` matrix |
+| Galaxy import | Legacy role metadata for publication | [Unit tests](.github/workflows/unit-tests.yml) → `validate` |
+| Docker integration | Real apt install in containers | [Integration tests](.github/workflows/integration-tests.yml) |
+| AWS remote | Full apply on ephemeral EC2 | [RC AWS](.github/workflows/rc-aws-remote-tests.yml), [manual AWS](.github/workflows/aws-remote-tests.yml) |
 
-GitHub Actions workflows:
+See also [docs/aws-remote-tests-workflow.md](docs/aws-remote-tests-workflow.md) for OIDC, repository variables, and teardown guarantees.
+
+### Unit tests workflow
+
+[`.github/workflows/unit-tests.yml`](.github/workflows/unit-tests.yml) runs on every PR, push to `main`, and `workflow_dispatch`. Jobs run in sequence:
+
+```text
+lint → policy → unit (matrix) → validate
+```
+
+#### `lint` job
+
+| Step | Purpose |
+|------|---------|
+| `pre-commit run --all-files` | ansible-lint, yamllint, whitespace, EOF fixes |
+| `ansible-playbook --syntax-check tests/test.yml` | Role example playbook syntax |
+| `playbooks/ci-check-mode.yml --check` | Synthetic Ubuntu noble host: facts, validation, repository line generation without apt changes |
+| `tests/validate-release-workflows.sh` | Release/Galaxy workflow contracts (semantic-version tags only) |
+| `tests/validate-gitignore.sh` | No tracked files violate `.gitignore` |
+
+#### `policy` job
+
+| Step | Purpose |
+|------|---------|
+| `python -m unittest discover -s tests/unit` | Python unit tests (see below) |
+| `scripts/validate-role-defaults.py` | `defaults/main.yml`, `meta/argument_specs.yml`, and `meta/main.yml` stay aligned with the unit-test platform matrix |
+| `scripts/check-ansible-version-policy.py` | `ansible-core>=2.20,<2.21` documented consistently in README, requirements, Galaxy metadata |
+| Molecule schema check | Every `molecule/*/molecule.yml` has required keys (Vagrant scenarios omit `dependency`) |
+| AWS platform catalog | Six integration platforms defined in `scripts/aws_integration_platforms.py` |
+
+#### `unit` matrix
+
+Three parallel jobs run `ansible-playbook` against synthetic facts (no containers, no network apt):
+
+| Job | Playbook | Coverage |
+|-----|----------|----------|
+| Unit (all platforms) | `molecule/unit/converge.yml` | All supported distros/releases in one matrix: jammy, noble, plucky, questing, bookworm, trixie; amd64 and arm64 |
+| Unit (Ubuntu 25.04) | `molecule/unit-ubuntu-plucky/converge.yml` | Plucky-specific regression path |
+| Unit (Ubuntu 25.10) | `molecule/unit-ubuntu-questing/converge.yml` | Questing-specific regression path |
+
+Ansible unit tasks under `molecule/common/unit/tasks/` cover:
+
+- Repository fact generation (`test_repository_facts.yml`)
+- Package list composition per distribution (`test_distribution_packages.yml`, `test_package_selection.yml`)
+- Platform validation failures (`test_validation_failure.yml`)
+- Architecture detection and override rules (`test_architecture_validation.yml`)
+- Apt keyring install and rotation with local fixtures (`test_keyring_lifecycle.yml`)
+
+#### `validate` job
+
+Runs `galaxy_importer` in **legacy role** mode to ensure the role would pass Ansible Galaxy import checks before a tagged release.
+
+### Python unit tests (`tests/unit/`)
+
+| Test module | What it checks |
+|-------------|----------------|
+| `test_parse_regolith_docs_stable.py` | `scripts/parse-regolith-docs-stable.py` extracts stable version pins from Regolith docs HTML |
+| `test_validate_role_defaults.py` | `validate-role-defaults.py` accepts the current repository tree |
+| `test_prepare_aws_matrix.py` | AWS matrix builder includes only integration jobs with `conclusion: success`; platform catalog matches the six integration containers |
+
+Run locally:
+
+```bash
+python -m pip install pyyaml
+python -m unittest discover -s tests/unit -p 'test_*.py' -v
+```
+
+### Integration tests workflow
+
+[`.github/workflows/integration-tests.yml`](.github/workflows/integration-tests.yml) runs six parallel container jobs (same platforms as the supported-platforms table):
+
+| Container image | Job name |
+|-----------------|----------|
+| `python:3.13-bookworm` | Debian bookworm |
+| `python:3.13-trixie` | Debian trixie |
+| `ubuntu:22.04` | Ubuntu 22.04 (jammy) |
+| `ubuntu:24.04` | Ubuntu 24.04 (noble) |
+| `ubuntu:25.04` | Ubuntu 25.04 (plucky) |
+| `ubuntu:25.10` | Ubuntu 25.10 (questing) |
+
+Each job uses [`.github/actions/run-integration-test`](.github/actions/run-integration-test/action.yml):
+
+1. **Prepare** — `molecule/common/docker_prepare.yml` (apt, python)
+2. **Apply** — `molecule/common/converge.yml` (full role install from the real Regolith archive)
+3. **Verify** — `molecule/default/verify.yml` (packages, apt health, X session registration)
+4. **Idempotence** — second converge; fails if `PLAY RECAP` shows `changed > 0`
+5. **Repository transitions** — `repository_transition.yml`, `repository_suite_transition.yml`
+
+Triggers: PR, push to `main`, daily cron, `workflow_dispatch`.
+
+### Release path and AWS RC tests
+
+**Feature branches and ordinary PRs** run unit + integration + Trivy only. They do **not** create RC tags or AWS tests.
+
+**After merge to `main`:**
+
+```text
+push to main
+  → Release Please opens/updates release PR (release-please--branches--main)
+  → tag-release-candidate may push vX.Y.Z-rc.N on the release PR branch
+  → Integration tests run on the release PR (six containers)
+  → When integration completes, rc-aws-remote-tests starts (workflow_run)
+  → AWS EC2 test runs only for platforms whose integration job passed
+  → Merge release PR → vX.Y.Z tag, GitHub release, Galaxy import
+```
+
+| Stage | Trigger | AWS? |
+|-------|---------|------|
+| Feature PR | `pull_request` | No |
+| `main` CI | `push` to `main` | No |
+| Release PR | `pull_request` from `release-please--branches--main` | Yes, after integration (per platform) |
+| Final release | Merge release PR | No (Galaxy publish only) |
+
+[`.github/workflows/rc-aws-remote-tests.yml`](.github/workflows/rc-aws-remote-tests.yml) builds its matrix with [`scripts/prepare-aws-matrix-from-integration.py`](scripts/prepare-aws-matrix-from-integration.py), which reads successful jobs from the Integration tests workflow run. Failed integration platforms are skipped automatically.
+
+Manual full-matrix testing: [`.github/workflows/aws-remote-tests.yml`](.github/workflows/aws-remote-tests.yml) (`workflow_dispatch`).
+
+### Continuous integration (workflow reference)
 
 | Workflow | Trigger | What it runs |
 |----------|---------|----------------|
-| [Unit tests](.github/workflows/unit-tests.yml) | PR, push to `main`, manual | pre-commit; policy scripts; `ansible-playbook` unit matrix; Galaxy metadata validation |
-| [Integration tests](.github/workflows/integration-tests.yml) | PR, push to `main`, daily cron, manual | Native container jobs (Debian bookworm/trixie, Ubuntu jammy/noble/plucky/questing) |
-| [AWS RC remote tests](.github/workflows/rc-aws-remote-tests.yml) | `v*-rc*` tags, **after integration passes (per platform)**, manual | Ephemeral EC2 per successful integration platform |
-| [AWS remote tests](.github/workflows/aws-remote-tests.yml) | Manual | On-demand ephemeral EC2 matrix |
-| [Check Regolith stable pin (docs)](.github/workflows/check-regolith-stable.yml) | Daily cron, manual | Compares `defaults/main.yml` pinned component with the latest stable release listed on Regolith docs, opens a drift issue, and fails on mismatch |
-| [Release Please](.github/workflows/release-please.yml) | Push to `main`, manual | Release PR, RC tags for AWS tests, Galaxy import on release |
-| [Release](.github/workflows/release.yml) | Manual only | Recovery import of an existing semantic-version tag into Ansible Galaxy |
-| [Security scan](.github/workflows/trivy.yml) | PR, push to `main`, weekly, manual | Trivy filesystem, secret, and misconfig scan (CRITICAL/HIGH) |
+| [Unit tests](.github/workflows/unit-tests.yml) | PR, push to `main`, manual | `lint` → `policy` → Ansible unit matrix → Galaxy `validate` (see above) |
+| [Integration tests](.github/workflows/integration-tests.yml) | PR, push to `main`, daily cron, manual | Six container jobs: full install, verify, idempotence, repo transitions |
+| [AWS RC remote tests](.github/workflows/rc-aws-remote-tests.yml) | Integration complete on release PR, `v*-rc*` tags, manual | Ephemeral EC2 per **successful** integration platform (Debian + Ubuntu matrix) |
+| [AWS remote tests](.github/workflows/aws-remote-tests.yml) | Manual | On-demand EC2: pick OS version, arch, scenario |
+| [Auto-run release please checks](.github/workflows/auto-run-release-please-checks.yml) | Release PR opened/synced | Re-runs CI blocked by first-time contributor approval on release PRs |
+| [Check Regolith stable pin (docs)](.github/workflows/check-regolith-stable.yml) | Daily cron, manual | Compares `defaults/main.yml` pin with Regolith docs; opens drift issue |
+| [Release Please](.github/workflows/release-please.yml) | Push to `main`, manual | Release PR, RC tags, Galaxy import on final release |
+| [Release](.github/workflows/release.yml) | Manual only | Recovery Galaxy import for an existing semver tag |
+| [Security scan](.github/workflows/trivy.yml) | PR, push to `main`, weekly, manual | Trivy filesystem scan (CRITICAL/HIGH) |
 
 #### Dependency updates
 
