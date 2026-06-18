@@ -66,43 +66,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  gate:
-    name: Detect Release Please integration completion
-    if: >-
-      github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-24.04
-    outputs:
-      is_release_pr: ${{ steps.detect.outputs.is_release_pr }}
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Resolve triggering integration run
-        id: detect
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python3 scripts/detect_release_pr_integration.py \
-            --workflow-run-id "${{ github.event.workflow_run.id }}"
-
   prepare-matrix:
     name: Prepare AWS matrix from integration results
-    needs: gate
     if: >-
-      always() &&
+      github.event_name == 'workflow_call' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
       (
-        github.event_name == 'workflow_call' ||
-        github.event_name == 'workflow_dispatch' ||
-        github.event_name == 'push' ||
-        (
-          github.event_name == 'workflow_run' &&
-          needs.gate.outputs.is_release_pr == 'true'
-        )
-      ) &&
-      (
-        needs.gate.result == 'success' ||
-        needs.gate.result == 'skipped'
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success'
       )
     runs-on: ubuntu-24.04
     outputs:
@@ -113,6 +85,15 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+
+      - name: Detect Release Please integration completion
+        id: release_gate
+        if: github.event_name == 'workflow_run'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/detect_release_pr_integration.py \
+            --workflow-run-id "${{ github.event.workflow_run.id }}"
 
       - name: Resolve AWS matrix from integration jobs
         id: matrix
@@ -126,6 +107,17 @@ jobs:
           META_FILE: ${{ runner.temp }}/aws-matrix-meta.json
         run: |
           set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_run" ] && \
+             [ "${{ steps.release_gate.outputs.is_release_pr }}" != "true" ]; then
+            python3 - <<'PY' >> "$GITHUB_OUTPUT"
+import os
+print('matrix={"include":[]}')
+print('git_ref=')
+print('has_matrix=false')
+print(f"scenario={os.environ['INPUT_SCENARIO']}")
+PY
+            exit 0
+          fi
           args=(--matrix-file "${MATRIX_FILE}" --meta-file "${META_FILE}")
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
             args+=(--workflow-run-id "${WORKFLOW_RUN_ID}")
@@ -154,20 +146,6 @@ jobs:
           print(f"has_matrix={meta['has_matrix']}")
           print(f"scenario={os.environ['INPUT_SCENARIO']}")
           PY
-
-  debug-matrix-output:
-    name: Debug matrix job output
-    needs: prepare-matrix
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Show prepare-matrix outputs
-        env:
-          MATRIX: ${{ needs.prepare-matrix.outputs.matrix }}
-          HAS_MATRIX: ${{ needs.prepare-matrix.outputs.has_matrix }}
-        run: |
-          echo "has_matrix=${HAS_MATRIX}"
-          echo "matrix_length=${#MATRIX}"
-          echo "matrix_prefix=${MATRIX:0:120}"
 
   aws-rc-remote-tests:
     name: ${{ matrix.label }}
