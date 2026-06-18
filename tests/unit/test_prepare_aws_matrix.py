@@ -20,7 +20,7 @@ class PrepareAwsMatrixTests(unittest.TestCase):
         self.assertEqual(labels, ["Debian bookworm", "Ubuntu 24.04 (noble)"])
 
     def test_platform_catalog_matches_integration_matrix_size(self) -> None:
-        self.assertEqual(len(PLATFORMS), 6)
+        self.assertEqual(len(PLATFORMS), 5)
 
 
 if __name__ == "__main__":

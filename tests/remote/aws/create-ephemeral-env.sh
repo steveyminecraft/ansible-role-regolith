@@ -47,11 +47,11 @@ resolve_ubuntu_ami() {
 }
 
 resolve_debian_ami() {
-  local codename="${1:-bookworm}"
+  local version="${1:-12}"
   local arch="${2:-amd64}"
   aws ssm get-parameter \
     --region "${AWS_REGION}" \
-    --name "/aws/service/debian/release/${codename}/latest/${arch}/hvm/ebs-gp3/ami-id" \
+    --name "/aws/service/debian/release/${version}/latest/${arch}" \
     --query 'Parameter.Value' \
     --output text
 }
@@ -62,8 +62,8 @@ case "${AWS_OS_FAMILY}" in
     ami_id="$(resolve_ubuntu_ami "${ubuntu_version}" "${arch_suffix}")"
     ;;
   debian)
-    debian_codename="${AWS_OS_CODENAME:-bookworm}"
-    ami_id="$(resolve_debian_ami "${debian_codename}" "${arch_suffix}")"
+    debian_version="${AWS_OS_VERSION:-12}"
+    ami_id="$(resolve_debian_ami "${debian_version}" "${arch_suffix}")"
     ;;
   *)
     echo "Unsupported AWS_OS_FAMILY: ${AWS_OS_FAMILY}" >&2

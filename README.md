@@ -16,7 +16,6 @@ Only the Ubuntu and Debian distributions listed below are supported; Debian-fami
 
 | Distribution | Release (codename) | Version |
 |--------------|-------------------|---------|
-| Ubuntu | jammy | 22.04 |
 | Ubuntu | noble | 24.04 |
 | Ubuntu | plucky | 25.04 |
 | Ubuntu | questing | 25.10 |
@@ -218,7 +217,7 @@ lint → policy → unit (matrix) → validate
 | `scripts/validate-role-defaults.py` | `defaults/main.yml`, `meta/argument_specs.yml`, and `meta/main.yml` stay aligned with the unit-test platform matrix |
 | `scripts/check-ansible-version-policy.py` | `ansible-core>=2.20,<2.21` documented consistently in README, requirements, Galaxy metadata |
 | Molecule schema check | Every `molecule/*/molecule.yml` has required keys (Vagrant scenarios omit `dependency`) |
-| AWS platform catalog | Six integration platforms defined in `scripts/aws_integration_platforms.py` |
+| AWS platform catalog | Five integration platforms defined in `scripts/aws_integration_platforms.py` |
 
 #### `unit` matrix
 
@@ -226,7 +225,7 @@ Three parallel jobs run `ansible-playbook` against synthetic facts (no container
 
 | Job | Playbook | Coverage |
 |-----|----------|----------|
-| Unit (all platforms) | `molecule/unit/converge.yml` | All supported distros/releases in one matrix: jammy, noble, plucky, questing, bookworm, trixie; amd64 and arm64 |
+| Unit (all platforms) | `molecule/unit/converge.yml` | All supported distros/releases in one matrix: noble, plucky, questing, bookworm, trixie; amd64 and arm64 |
 | Unit (Ubuntu 25.04) | `molecule/unit-ubuntu-plucky/converge.yml` | Plucky-specific regression path |
 | Unit (Ubuntu 25.10) | `molecule/unit-ubuntu-questing/converge.yml` | Questing-specific regression path |
 
@@ -248,7 +247,7 @@ Runs `galaxy_importer` in **legacy role** mode to ensure the role would pass Ans
 |-------------|----------------|
 | `test_parse_regolith_docs_stable.py` | `scripts/parse-regolith-docs-stable.py` extracts stable version pins from Regolith docs HTML |
 | `test_validate_role_defaults.py` | `validate-role-defaults.py` accepts the current repository tree |
-| `test_prepare_aws_matrix.py` | AWS matrix builder includes only integration jobs with `conclusion: success`; platform catalog matches the six integration containers |
+| `test_prepare_aws_matrix.py` | AWS matrix builder includes only integration jobs with `conclusion: success`; platform catalog matches the five integration containers |
 | `test_verify_aws_rc_gate.py` | Legacy Galaxy/AWS RC gate helper (unused by publish workflows) |
 | `test_verify_ci_prerequisites.py` | Integration gate requires successful Unit tests and Trivy |
 
@@ -266,13 +265,12 @@ and `main` pushes. On pull requests it waits for both workflows on the PR head c
 `main`, the same gate runs via `workflow_run` when Unit tests complete. Scheduled and manual runs skip
 that gate.
 
-Six parallel container jobs (same platforms as the supported-platforms table):
+Five parallel container jobs (same platforms as the supported-platforms table):
 
 | Container image | Job name |
 |-----------------|----------|
 | `python:3.13-bookworm` | Debian bookworm |
 | `python:3.13-trixie` | Debian trixie |
-| `ubuntu:22.04` | Ubuntu 22.04 (jammy) |
 | `ubuntu:24.04` | Ubuntu 24.04 (noble) |
 | `ubuntu:25.04` | Ubuntu 25.04 (plucky) |
 | `ubuntu:25.10` | Ubuntu 25.10 (questing) |
@@ -364,7 +362,7 @@ Repository key fingerprint enforcement is not enabled because this role does not
 #### Further hardening (optional)
 
 - **Repository signing-key rotation:** the role refreshes the installed keyring when downloaded key material changes, but automatic rotation after upstream key changes should still be verified on real hosts when Regolith publishes a new signing key.
-- **Branch protection** on `main`: PR merges require unit tests (Lint, all Unit matrix jobs, Role validation), integration tests (Debian bookworm/trixie, Ubuntu jammy/noble/plucky/questing), and Trivy.
+- **Branch protection** on `main`: PR merges require unit tests (Lint, all Unit matrix jobs, Role validation), integration tests (Debian bookworm/trixie, Ubuntu noble/plucky/questing), and Trivy.
 - **pip-audit** in CI for Python requirement files (complements Trivy; no lockfile today).
 - **OpenSSF Scorecard** workflow for supply-chain posture on the repo.
 - **CodeQL** is low value here (mostly YAML/Ansible); ansible-lint and Trivy cover more of this role.
