@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.7.0](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.6.0...v3.7.0) (2026-06-18)
+
+
+### Features
+
+* auto-run AWS RC tests from Release Please via workflow_call ([546c1c1](https://github.com/steveyminecraft/ansible-role-regolith/commit/546c1c13a6d13dab42a9b7d7fdd34ce6a03941b1))
+* gate AWS RC tests on per-platform integration success ([6927ca9](https://github.com/steveyminecraft/ansible-role-regolith/commit/6927ca9194c594ede4aa731cbcc3c854c9fa2608))
+
 ## [3.6.0](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.5.3...v3.6.0) (2026-06-18)
 
 
