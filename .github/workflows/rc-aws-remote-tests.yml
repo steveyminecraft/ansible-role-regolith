@@ -140,7 +140,11 @@ jobs:
             fi
           fi
           python3 scripts/prepare-aws-matrix-from-integration.py "${args[@]}"
-          echo "matrix=$(jq -c . "${RUNNER_TEMP}/aws-matrix.json")" >> "$GITHUB_OUTPUT"
+          {
+            echo 'matrix<<MATRIX_EOF'
+            jq -c . "${RUNNER_TEMP}/aws-matrix.json"
+            echo 'MATRIX_EOF'
+          } >> "$GITHUB_OUTPUT"
           echo "scenario=${INPUT_SCENARIO}" >> "$GITHUB_OUTPUT"
 
   aws-rc-remote-tests:
