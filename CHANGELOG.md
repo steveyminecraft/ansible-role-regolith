@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.8.0](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.7.1...v3.8.0) (2026-06-18)
+
+
+### Features
+
+* **ci:** gate integration and Galaxy on upstream test success ([b8ae562](https://github.com/steveyminecraft/ansible-role-regolith/commit/b8ae562e28aacdf75f5c4c22308d56f1d8e1d784))
+
+
+### Bug Fixes
+
+* **ci:** run integration on pull_request with prerequisite gate ([3bc8568](https://github.com/steveyminecraft/ansible-role-regolith/commit/3bc8568616496f80564fb268c7812be1ebb6d3a6))
+* **ci:** unblock integration matrix after prerequisite gate ([0d311d0](https://github.com/steveyminecraft/ansible-role-regolith/commit/0d311d06adb62b93c56b7423e4b17cb929104909))
+
 ## [3.7.1](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.7.0...v3.7.1) (2026-06-18)
 
 
