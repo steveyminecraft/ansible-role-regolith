@@ -22,7 +22,6 @@ jobs:
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
-      prs_created: ${{ steps.release.outputs.prs_created }}
 
     steps:
       - name: Create or update release PR
@@ -31,62 +30,6 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          # Default GITHUB_TOKEN; set RELEASE_PLEASE_TOKEN only when a PAT is
-          # needed for RC tag pushes to trigger downstream workflows.
-
-  tag-release-candidate:
-    name: Tag release candidate for AWS tests
-    needs: release-please
-    if: >-
-      needs.release-please.outputs.prs_created == 'true'
-      && needs.release-please.outputs.release_created != 'true'
-    runs-on: ubuntu-24.04
-    outputs:
-      rc_tag: ${{ steps.rc_tag.outputs.tag }}
-      rc_pushed: ${{ steps.rc_tag.outputs.pushed }}
-    permissions:
-      contents: write
-    steps:
-      - name: Check out release PR branch
-        uses: actions/checkout@v6
-        with:
-          ref: release-please--branches--main
-          fetch-depth: 0
-
-      - name: Create and push RC tag
-        id: rc_tag
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          version="$(python3 -c "import json; print(json.load(open('.release-please-manifest.json'))['.'])")"
-          base_tag="v${version}"
-          head_sha="$(git rev-parse HEAD)"
-
-          existing_for_commit="$(git tag -l "${base_tag}-rc.*" --points-at "${head_sha}" | head -1 || true)"
-          if [ -n "${existing_for_commit}" ]; then
-            echo "RC tag already exists for ${head_sha}: ${existing_for_commit}"
-            echo "tag=${existing_for_commit}" >> "$GITHUB_OUTPUT"
-            echo "pushed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          latest_rc=0
-          while IFS= read -r tag; do
-            suffix="${tag#${base_tag}-rc.}"
-            if [[ "${suffix}" =~ ^[0-9]+$ ]] && (( suffix > latest_rc )); then
-              latest_rc="${suffix}"
-            fi
-          done < <(git tag -l "${base_tag}-rc.*")
-
-          rc_tag="${base_tag}-rc.$((latest_rc + 1))"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${rc_tag}" -m "Release candidate for ${base_tag} (release PR ${head_sha::7})" "${head_sha}"
-          git push origin "${rc_tag}"
-          echo "Pushed ${rc_tag}."
-          echo "tag=${rc_tag}" >> "$GITHUB_OUTPUT"
-          echo "pushed=true" >> "$GITHUB_OUTPUT"
 
   publish-galaxy:
     name: Publish Galaxy
@@ -95,7 +38,6 @@ jobs:
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
     permissions:
       contents: read
-      actions: read
 
     steps:
       - name: Check out released revision
@@ -103,12 +45,6 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ needs.release-please.outputs.tag_name }}
-
-      - name: Verify AWS RC tests passed
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
-        run: python3 scripts/verify_aws_rc_gate.py --release-tag "${RELEASE_TAG}"
 
       - name: Import role into Ansible Galaxy
         uses: ./.github/actions/import-galaxy-role

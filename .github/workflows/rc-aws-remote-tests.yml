@@ -1,16 +1,11 @@
 ---
-name: AWS RC remote tests
+name: AWS PR remote tests
 
 on:
-  workflow_run:
-    workflows:
-      - Integration tests
-    types:
-      - completed
   workflow_call:
     inputs:
       git_ref:
-        description: Git ref to check out (RC tag or branch)
+        description: Git ref to check out
         required: true
         type: string
       scenario:
@@ -19,18 +14,10 @@ on:
         type: string
         default: regolith-stable
       integration_workflow_run_id:
-        description: Integration tests workflow run id (optional)
+        description: Integration tests workflow run id
         required: false
         type: string
         default: ""
-      require_rc_tag:
-        description: Skip AWS tests unless an RC tag points at the commit
-        required: false
-        type: boolean
-        default: true
-  push:
-    tags:
-      - "v*-rc*"
   workflow_dispatch:
     inputs:
       scenario:
@@ -43,16 +30,11 @@ on:
           - regolith-main
           - regolith-preview
       git_ref:
-        description: "Optional git ref override (defaults to latest RC tag workflow context)"
-        required: false
-        default: ""
-      require_rc_tag:
-        description: "Require an RC tag on the commit before running AWS tests"
-        type: boolean
+        description: "Git ref to test"
         required: true
-        default: false
+        default: main
       integration_workflow_run_id:
-        description: "Integration tests workflow run id (manual recovery)"
+        description: "Integration tests workflow run id (optional)"
         required: false
         default: ""
 
@@ -62,20 +44,12 @@ permissions:
   id-token: write
 
 concurrency:
-  group: aws-rc-remote-tests-${{ github.workflow }}-${{ github.event.workflow_run.id || inputs.git_ref || github.ref_name }}
+  group: aws-pr-remote-tests-${{ github.workflow }}-${{ inputs.git_ref || github.event.inputs.git_ref || github.sha }}
   cancel-in-progress: false
 
 jobs:
   prepare-matrix:
     name: Prepare AWS matrix from integration results
-    if: >-
-      github.event_name == 'workflow_call' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' ||
-      (
-        github.event_name == 'workflow_run' &&
-        github.event.workflow_run.conclusion == 'success'
-      )
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
@@ -86,49 +60,22 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
-      - name: Detect Release Please integration completion
-        id: release_gate
-        if: github.event_name == 'workflow_run'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python3 scripts/detect_release_pr_integration.py \
-            --workflow-run-id "${{ github.event.workflow_run.id }}"
-
       - name: Resolve AWS matrix from integration jobs
         id: matrix
         env:
           GH_TOKEN: ${{ github.token }}
           INPUT_GIT_REF: ${{ inputs.git_ref || github.event.inputs.git_ref || github.ref_name }}
           INPUT_SCENARIO: ${{ inputs.scenario || github.event.inputs.scenario || 'regolith-stable' }}
-          INPUT_REQUIRE_RC_TAG: ${{ inputs.require_rc_tag || github.event.inputs.require_rc_tag || 'false' }}
-          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id || inputs.integration_workflow_run_id || github.event.inputs.integration_workflow_run_id || '' }}
+          WORKFLOW_RUN_ID: ${{ inputs.integration_workflow_run_id || github.event.inputs.integration_workflow_run_id || '' }}
           MATRIX_FILE: ${{ runner.temp }}/aws-matrix.json
           META_FILE: ${{ runner.temp }}/aws-matrix-meta.json
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "workflow_run" ] && \
-             [ "${{ steps.release_gate.outputs.is_release_pr }}" != "true" ]; then
-            echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
-            echo "git_ref=" >> "$GITHUB_OUTPUT"
-            echo "has_matrix=false" >> "$GITHUB_OUTPUT"
-            echo "scenario=${INPUT_SCENARIO}" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
           args=(--matrix-file "${MATRIX_FILE}" --meta-file "${META_FILE}")
-          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+          if [ -n "${WORKFLOW_RUN_ID}" ]; then
             args+=(--workflow-run-id "${WORKFLOW_RUN_ID}")
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            args+=(--git-ref "${INPUT_GIT_REF}" --require-rc-tag)
-          else
-            if [ -n "${WORKFLOW_RUN_ID}" ]; then
-              args+=(--workflow-run-id "${WORKFLOW_RUN_ID}")
-            elif [ -n "${INPUT_GIT_REF}" ]; then
-              args+=(--git-ref "${INPUT_GIT_REF}")
-            fi
-            if [ "${INPUT_REQUIRE_RC_TAG}" = "true" ]; then
-              args+=(--require-rc-tag)
-            fi
+          elif [ -n "${INPUT_GIT_REF}" ]; then
+            args+=(--git-ref "${INPUT_GIT_REF}")
           fi
           python3 scripts/prepare-aws-matrix-from-integration.py "${args[@]}"
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
@@ -144,7 +91,7 @@ jobs:
           print(f"scenario={os.environ['INPUT_SCENARIO']}")
           PY
 
-  aws-rc-remote-tests:
+  aws-pr-remote-tests:
     name: ${{ matrix.label }}
     needs: prepare-matrix
     if: needs.prepare-matrix.outputs.has_matrix == 'true'
@@ -160,12 +107,13 @@ jobs:
       AWS_OS_VERSION: ${{ matrix.os_version }}
       AWS_OS_CODENAME: ${{ matrix.os_codename }}
       AWS_ARCH: ${{ matrix.arch }}
+      AWS_HOST_NAME: ${{ matrix.os_family }}-${{ matrix.os_version }}
       AWS_ANSIBLE_USER: ${{ matrix.ansible_user }}
       AWS_SUBNET_ID: ${{ vars.AWS_TEST_SUBNET_ID }}
       AWS_KEY_NAME: ${{ vars.AWS_TEST_KEY_NAME }}
       AWS_SSH_CIDR: ${{ vars.AWS_TEST_SSH_CIDR || '0.0.0.0/0' }}
       AWS_INSTANCE_TYPE: ${{ vars.AWS_TEST_INSTANCE_TYPE_AMD64 }}
-      AWS_TEST_PREFIX: ansible-regolith-rc
+      AWS_TEST_PREFIX: ansible-regolith-pr
       AWS_PROJECT_TAG: ansible-role-regolith
       AWS_INVENTORY_TEMPLATE: tests/remote/inventories/aws-ephemeral-template.yml
     steps:
@@ -173,10 +121,10 @@ jobs:
         run: |
           {
             echo "AWS_SSH_PRIVATE_KEY_PATH=${RUNNER_TEMP}/aws-test.key"
-            echo "AWS_STATE_FILE=${RUNNER_TEMP}/aws-rc-state-${{ matrix.platform_id }}.json"
-            echo "AWS_INVENTORY_FILE=${RUNNER_TEMP}/aws-rc-inventory-${{ matrix.platform_id }}.yml"
-            echo "AWS_METADATA_FILE=${RUNNER_TEMP}/aws-rc-metadata-${{ matrix.platform_id }}.json"
-            echo "AWS_CLEANUP_STATUS_FILE=${RUNNER_TEMP}/aws-rc-cleanup-${{ matrix.platform_id }}.json"
+            echo "AWS_STATE_FILE=${RUNNER_TEMP}/aws-pr-state-${{ matrix.platform_id }}.json"
+            echo "AWS_INVENTORY_FILE=${RUNNER_TEMP}/aws-pr-inventory-${{ matrix.platform_id }}.yml"
+            echo "AWS_METADATA_FILE=${RUNNER_TEMP}/aws-pr-metadata-${{ matrix.platform_id }}.json"
+            echo "AWS_CLEANUP_STATUS_FILE=${RUNNER_TEMP}/aws-pr-cleanup-${{ matrix.platform_id }}.json"
           } >> "$GITHUB_ENV"
 
       - name: Validate repository configuration
@@ -208,7 +156,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_TEST_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-          role-session-name: ansible-regolith-rc-${{ matrix.platform_id }}
+          role-session-name: ansible-regolith-pr-${{ matrix.platform_id }}
 
       - name: Setup Ansible test environment
         uses: ./.github/actions/setup-ansible-test

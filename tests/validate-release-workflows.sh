@@ -33,8 +33,10 @@ grep -qE '\^v\[0-9\]\+\\\.\[0-9\]\+\\\.\[0-9\]\+\$' "${action}" \
 
 grep -q 'git-reference: \${{ needs.release-please.outputs.tag_name }}' "${release_please}" \
   || fail "release-please workflow must pass git-reference to import action"
-grep -q 'verify_aws_rc_gate.py' "${release_please}" \
-  || fail "release-please workflow must verify AWS RC tests before Galaxy publish"
+
+if grep -q 'verify_aws_rc_gate.py' "${release_please}"; then
+  fail "release-please workflow must not gate Galaxy publish on AWS RC tests"
+fi
 
 grep -q 'release-tag:' "${release}" || fail "release workflow must require release-tag input"
 grep -q 'git-reference: \${{ inputs.release-tag }}' "${release}" \

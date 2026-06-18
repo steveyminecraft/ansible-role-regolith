@@ -17,12 +17,20 @@ permissions:
   actions: read
 
 concurrency:
-  group: integration-tests-${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.sha }}
+  group: integration-tests-${{ github.event_name }}-${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
   prerequisites:
     name: Verify lint and security prerequisites
+    if: >-
+      github.event_name == 'pull_request' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.head_branch == 'main'
+      )
     runs-on: ubuntu-24.04
     outputs:
       head_sha: ${{ steps.resolve.outputs.head_sha }}
@@ -67,6 +75,7 @@ jobs:
   integration:
     name: ${{ matrix.label }}
     needs: prerequisites
+    if: needs.prerequisites.result == 'success'
     runs-on: ubuntu-24.04
     container:
       image: ${{ matrix.image }}
@@ -78,8 +87,6 @@ jobs:
             label: Debian bookworm
           - image: python:3.13-trixie
             label: Debian trixie
-          - image: ubuntu:22.04
-            label: Ubuntu 22.04 (jammy)
           - image: ubuntu:24.04
             label: Ubuntu 24.04 (noble)
           - image: ubuntu:25.04
@@ -102,14 +109,14 @@ jobs:
       - name: Run integration test
         uses: ./.github/actions/run-integration-test
 
-  aws-rc-remote-tests:
-    name: AWS RC remote tests
+  aws-pr-remote-tests:
+    name: AWS PR remote tests
     needs:
       - prerequisites
       - integration
     if: >-
       github.event_name == 'pull_request' &&
-      startsWith(github.event.pull_request.head.ref, 'release-please--branches--') &&
+      !startsWith(github.event.pull_request.head.ref, 'release-please--branches--') &&
       needs.integration.result == 'success'
     uses: ./.github/workflows/rc-aws-remote-tests.yml
     permissions:
@@ -120,4 +127,3 @@ jobs:
     with:
       git_ref: ${{ needs.prerequisites.outputs.head_sha }}
       integration_workflow_run_id: ${{ github.run_id }}
-      require_rc_tag: false

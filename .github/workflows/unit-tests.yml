@@ -64,7 +64,7 @@ jobs:
           python -m unittest discover -s tests/unit -p 'test_*.py'
           python scripts/validate-role-defaults.py
           python scripts/check-ansible-version-policy.py
-          python -c "from scripts.aws_integration_platforms import PLATFORMS; assert len(PLATFORMS) == 6"
+          python -c "from scripts.aws_integration_platforms import PLATFORMS; assert len(PLATFORMS) == 5"
 
       - name: Validate Molecule scenario file structure
         run: |
