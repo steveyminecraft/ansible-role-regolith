@@ -249,7 +249,7 @@ Runs `galaxy_importer` in **legacy role** mode to ensure the role would pass Ans
 | `test_parse_regolith_docs_stable.py` | `scripts/parse-regolith-docs-stable.py` extracts stable version pins from Regolith docs HTML |
 | `test_validate_role_defaults.py` | `validate-role-defaults.py` accepts the current repository tree |
 | `test_prepare_aws_matrix.py` | AWS matrix builder includes only integration jobs with `conclusion: success`; platform catalog matches the six integration containers |
-| `test_verify_aws_rc_gate.py` | Galaxy publish gate requires successful AWS RC platform jobs |
+| `test_verify_aws_rc_gate.py` | Legacy Galaxy/AWS RC gate helper (unused by publish workflows) |
 | `test_verify_ci_prerequisites.py` | Integration gate requires successful Unit tests and Trivy |
 
 Run locally:
@@ -287,39 +287,36 @@ Each job uses [`.github/actions/run-integration-test`](.github/actions/run-integ
 
 Triggers: PR, push to `main`, daily cron, `workflow_dispatch`.
 
-### Release path and AWS RC tests
+### PR CI and AWS remote tests
 
-**Feature branches and ordinary PRs** run lint/unit/Trivy first, then integration — no RC tags or AWS tests.
+**Feature PRs** run the full pyramid before merge:
 
 ```text
-PR or push to main
+PR (feature branch)
   → Unit tests (lint → policy → unit → validate)  ─┐
   → Security scan (Trivy)                          ─┤ both must pass
   → Integration tests (after Unit tests completes) ─┘
+  → AWS PR remote tests (after integration; per successful platform)
 ```
+
+Release Please PRs (`release-please--branches--main`) run lint/unit/integration only — AWS already ran on the merged commits.
 
 **After merge to `main` (release path):**
 
 ```text
 push to main
-  → Release Please opens/updates release PR (release-please--branches--main)
-  → tag-release-candidate may push vX.Y.Z-rc.N on the release PR branch
-  → Unit tests + Trivy on the release PR
-  → Integration tests (after Unit tests completes)
-  → When integration completes, rc-aws-remote-tests starts (workflow_run)
-  → AWS EC2 test runs only for platforms whose integration job passed
+  → Release Please opens/updates release PR
   → Merge release PR → vX.Y.Z tag, GitHub release
-  → Galaxy import runs only if AWS RC tests passed for that version's RC tag
+  → Galaxy import on the release tag (no AWS gate)
 ```
 
 | Stage | Trigger | AWS? |
 |-------|---------|------|
-| Feature PR | `pull_request` | No |
-| `main` CI | `push` to `main` | No |
-| Release PR | `pull_request` from `release-please--branches--main` | Yes, after integration (per platform) |
-| Final release | Merge release PR | Galaxy publish gated on successful AWS RC run |
+| Feature PR | `pull_request` | Yes, after integration (per platform) |
+| Release PR | `pull_request` from `release-please--branches--main` | No |
+| Final release | Merge release PR | Galaxy publish only |
 
-[`.github/workflows/rc-aws-remote-tests.yml`](.github/workflows/rc-aws-remote-tests.yml) builds its matrix with [`scripts/prepare-aws-matrix-from-integration.py`](scripts/prepare-aws-matrix-from-integration.py), which reads successful jobs from the Integration tests workflow run. Failed integration platforms are skipped automatically.
+[`.github/workflows/rc-aws-remote-tests.yml`](.github/workflows/rc-aws-remote-tests.yml) (`AWS PR remote tests`) builds its matrix with [`scripts/prepare-aws-matrix-from-integration.py`](scripts/prepare-aws-matrix-from-integration.py), which reads successful jobs from the Integration tests workflow run. Failed integration platforms are skipped automatically.
 
 Manual full-matrix testing: [`.github/workflows/aws-remote-tests.yml`](.github/workflows/aws-remote-tests.yml) (`workflow_dispatch`).
 
@@ -330,11 +327,11 @@ Manual full-matrix testing: [`.github/workflows/aws-remote-tests.yml`](.github/w
 | [Unit tests](.github/workflows/unit-tests.yml) | PR, push to `main`, manual | `lint` → `policy` → Ansible unit matrix → Galaxy `validate` (see above) |
 | [Security scan](.github/workflows/trivy.yml) | PR, push to `main`, weekly, manual | Trivy filesystem scan (CRITICAL/HIGH); must pass before integration |
 | [Integration tests](.github/workflows/integration-tests.yml) | After Unit tests on PR/`main`, daily cron, manual | Six container jobs: full install, verify, idempotence, repo transitions |
-| [AWS RC remote tests](.github/workflows/rc-aws-remote-tests.yml) | Integration complete on release PR, `v*-rc*` tags, manual | Ephemeral EC2 per **successful** integration platform (Debian + Ubuntu matrix) |
+| [AWS PR remote tests](.github/workflows/rc-aws-remote-tests.yml) | After integration on feature PRs, manual | Ephemeral EC2 per **successful** integration platform |
 | [AWS remote tests](.github/workflows/aws-remote-tests.yml) | Manual | On-demand EC2: pick OS version, arch, scenario |
 | [Auto-run release please checks](.github/workflows/auto-run-release-please-checks.yml) | Release PR opened/synced | Re-runs CI blocked by first-time contributor approval on release PRs |
 | [Check Regolith stable pin (docs)](.github/workflows/check-regolith-stable.yml) | Daily cron, manual | Compares `defaults/main.yml` pin with Regolith docs; opens drift issue |
-| [Release Please](.github/workflows/release-please.yml) | Push to `main`, manual | Release PR, RC tags, Galaxy import on final release |
+| [Release Please](.github/workflows/release-please.yml) | Push to `main`, manual | Release PR, Galaxy import on final release |
 | [Release](.github/workflows/release.yml) | Manual only | Recovery Galaxy import for an existing semver tag |
 
 #### Dependency updates
@@ -349,8 +346,8 @@ This repository does **not** auto-tag `main` or publish the default branch to Ga
 2. Add repository secret **`GALAXY_API_KEY`** (Galaxy → Preferences → API Key). Publication jobs fail if this secret is missing.
 3. Use Conventional Commits in merged PR titles/commits. `fix:` creates patch releases, `feat:` creates minor releases, and breaking changes create major releases. See [CONTRIBUTING.md](CONTRIBUTING.md) for squash-merge guidance that keeps release notes deduplicated.
 4. Merge the Release Please PR to create the version tag and GitHub release.
-5. **Normal publish path:** when Release Please creates a release, [release-please.yml](.github/workflows/release-please.yml) checks out that tag, verifies the latest `vX.Y.Z-rc.N` AWS RC workflow passed, then imports into Ansible Galaxy with `ansible-galaxy role import --branch <tag>`.
-6. **Recovery publish path:** run [release.yml](.github/workflows/release.yml) manually, supply an existing semantic-version tag (for example `v1.2.3`) as `release-tag`, and the workflow passes the same tag to Galaxy as `git-reference`. The workflow cannot publish `main` or another branch. Use `skip-aws-gate` only for emergency republish when AWS RC history is unavailable.
+5. **Normal publish path:** when Release Please creates a release, [release-please.yml](.github/workflows/release-please.yml) checks out that tag and imports into Ansible Galaxy with `ansible-galaxy role import --branch <tag>`.
+6. **Recovery publish path:** run [release.yml](.github/workflows/release.yml) manually and supply an existing semantic-version tag (for example `v1.2.3`) as `release-tag`.
 
 PR validation and ordinary `main` CI runs do not import the role into Galaxy.
 

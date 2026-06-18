@@ -13,11 +13,6 @@ on:  # yamllint disable-line rule:truthy
         default: regolith
         required: false
         type: string
-      skip-aws-gate:
-        description: "Skip AWS RC gate (emergency republish only)"
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -28,7 +23,6 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      actions: read
 
     steps:
       - name: Check out tagged revision
@@ -36,13 +30,6 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.release-tag }}
-
-      - name: Verify AWS RC tests passed
-        if: ${{ !inputs.skip-aws-gate }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.release-tag }}
-        run: python3 scripts/verify_aws_rc_gate.py --release-tag "${RELEASE_TAG}"
 
       - name: Import role into Ansible Galaxy
         uses: ./.github/actions/import-galaxy-role
