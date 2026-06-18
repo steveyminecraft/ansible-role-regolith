@@ -23,6 +23,14 @@ concurrency:
 jobs:
   prerequisites:
     name: Verify lint and security prerequisites
+    if: >-
+      github.event_name == 'pull_request' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.event != 'pull_request'
+      )
     runs-on: ubuntu-24.04
     outputs:
       head_sha: ${{ steps.resolve.outputs.head_sha }}
@@ -67,6 +75,7 @@ jobs:
   integration:
     name: ${{ matrix.label }}
     needs: prerequisites
+    if: needs.prerequisites.result == 'success'
     runs-on: ubuntu-24.04
     container:
       image: ${{ matrix.image }}
