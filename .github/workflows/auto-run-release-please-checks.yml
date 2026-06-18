@@ -3,7 +3,7 @@
 # first-time contributor on public repos. CI workflows then sit in
 # action_required until a maintainer clicks "Approve workflows to run".
 # Rerun those runs under a trusted PAT when RELEASE_PLEASE_TOKEN is configured.
-name: Auto-run release please checks
+name: Release — Regolith: unblock release PR CI
 
 on:
   pull_request_target:
@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   rerun-pending-workflows:
-    name: Rerun blocked release PR workflows
+    name: Rerun release-please PR workflows
     if: startsWith(github.event.pull_request.head.ref, 'release-please--branches--')
     runs-on: ubuntu-24.04
     timeout-minutes: 5

@@ -18,7 +18,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from scripts.aws_integration_platforms import PLATFORMS_BY_JOB_NAME
 
 AWS_WORKFLOW_FILE = "rc-aws-remote-tests.yml"
-PREPARE_MATRIX_JOB = "Prepare AWS matrix from integration results"
+PREPARE_MATRIX_JOB = "Prepare EC2 test matrix"
 STABLE_TAG_RE = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)$")
 
 def github_request(url: str, token: str) -> dict | list:

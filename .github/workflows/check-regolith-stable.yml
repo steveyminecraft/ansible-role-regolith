@@ -1,5 +1,5 @@
 ---
-name: Check Regolith stable pin (docs)
+name: Maintenance — Regolith: stable pin drift
 
 on:  # yamllint disable-line rule:truthy
   schedule:

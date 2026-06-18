@@ -29,8 +29,8 @@ and credentials. Never commit production credentials.
 
 ## GitHub Actions AWS workflows
 
-- `.github/workflows/rc-aws-remote-tests.yml` — AWS PR remote tests (`workflow_call` / manual recovery)
-- `.github/workflows/aws-remote-tests.yml` — manual `workflow_dispatch` for any supported platform
+- `.github/workflows/rc-aws-remote-tests.yml` — **CI — Regolith: AWS EC2 (PR gate)** (`workflow_call` / manual recovery)
+- `.github/workflows/aws-remote-tests.yml` — **CI — Regolith: AWS EC2 (manual)** (`workflow_dispatch` for any supported platform)
 
 See [docs/aws-remote-tests-workflow.md](../docs/aws-remote-tests-workflow.md) for
 required repository variables, OIDC setup, and teardown guarantees.

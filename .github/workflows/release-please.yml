@@ -1,5 +1,5 @@
 ---
-name: Release Please
+name: Release — Regolith: version bump
 
 on:  # yamllint disable-line rule:truthy
   push:
@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   release-please:
-    name: Release Please
+    name: Create release PR
     runs-on: ubuntu-24.04
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}

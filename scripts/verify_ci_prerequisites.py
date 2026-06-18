@@ -12,10 +12,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 
-PREREQUISITE_WORKFLOWS: tuple[tuple[str, str], ...] = (
-    ("Unit tests", "unit-tests.yml"),
-    ("Security scan", "trivy.yml"),
-)
+from scripts.ci_workflow_names import PREREQUISITE_WORKFLOWS
 
 
 @dataclass(frozen=True)

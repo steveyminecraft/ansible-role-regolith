@@ -185,8 +185,8 @@ Tests run in layers from fast/cheap to slow/realistic. Feature-branch PRs exerci
 | Python policy | Defaults, Ansible version policy, docs parser, AWS platform map | [Unit tests](.github/workflows/unit-tests.yml) → `policy` |
 | Ansible unit | Role logic with synthetic facts (no apt/VM) | [Unit tests](.github/workflows/unit-tests.yml) → `unit` matrix |
 | Galaxy import | Legacy role metadata for publication | [Unit tests](.github/workflows/unit-tests.yml) → `validate` |
-| Security scan | Vulnerabilities and secrets in repo tree | [Security scan](.github/workflows/trivy.yml) |
-| Docker integration | Real apt install in containers | [Integration tests](.github/workflows/integration-tests.yml) (after lint/unit + Trivy) |
+| Security scan | Vulnerabilities and secrets in repo tree | [trivy.yml](.github/workflows/trivy.yml) |
+| Docker integration | Real apt install in containers | [integration-tests.yml](.github/workflows/integration-tests.yml) (after lint/unit + Trivy) |
 | AWS remote | Full apply on ephemeral EC2 | [RC AWS](.github/workflows/rc-aws-remote-tests.yml), [manual AWS](.github/workflows/aws-remote-tests.yml) |
 
 See also [docs/aws-remote-tests-workflow.md](docs/aws-remote-tests-workflow.md) for OIDC, repository variables, and teardown guarantees.
@@ -249,7 +249,7 @@ Runs `galaxy_importer` in **legacy role** mode to ensure the role would pass Ans
 | `test_validate_role_defaults.py` | `validate-role-defaults.py` accepts the current repository tree |
 | `test_prepare_aws_matrix.py` | AWS matrix builder includes only integration jobs with `conclusion: success`; platform catalog matches the five integration containers |
 | `test_verify_aws_rc_gate.py` | Legacy Galaxy/AWS RC gate helper (unused by publish workflows) |
-| `test_verify_ci_prerequisites.py` | Integration gate requires successful Unit tests and Trivy |
+| `test_verify_ci_prerequisites.py` | Integration gate requires successful lint/unit and Trivy workflows |
 
 Run locally:
 
@@ -260,9 +260,9 @@ python -m unittest discover -s tests/unit -p 'test_*.py' -v
 
 ### Integration tests workflow
 
-[`.github/workflows/integration-tests.yml`](.github/workflows/integration-tests.yml) starts after **Unit tests** and **Trivy** pass on PRs
+[`.github/workflows/integration-tests.yml`](.github/workflows/integration-tests.yml) (**CI — Regolith: container integration**) starts after **CI — Regolith: lint & unit tests** and **CI — Regolith: security (Trivy)** pass on PRs
 and `main` pushes. On pull requests it waits for both workflows on the PR head commit; after merge to
-`main`, the same gate runs via `workflow_run` when Unit tests complete. Scheduled and manual runs skip
+`main`, the same gate runs via `workflow_run` when the unit workflow completes. Scheduled and manual runs skip
 that gate.
 
 Five parallel container jobs (same platforms as the supported-platforms table):
@@ -291,10 +291,10 @@ Triggers: PR, push to `main`, daily cron, `workflow_dispatch`.
 
 ```text
 PR (feature branch)
-  → Unit tests (lint → policy → unit → validate)  ─┐
-  → Security scan (Trivy)                          ─┤ both must pass
-  → Integration tests (after Unit tests completes) ─┘
-  → AWS PR remote tests (after integration; per successful platform)
+  → CI — Regolith: lint & unit tests  ─┐
+  → CI — Regolith: security (Trivy)   ─┤ both must pass
+  → CI — Regolith: container integration ─┘
+  → CI — Regolith: AWS EC2 (PR gate) (after integration; per successful platform)
 ```
 
 Release Please PRs (`release-please--branches--main`) run lint/unit/integration only — AWS already ran on the merged commits.
@@ -314,23 +314,23 @@ push to main
 | Release PR | `pull_request` from `release-please--branches--main` | No |
 | Final release | Merge release PR | Galaxy publish only |
 
-[`.github/workflows/rc-aws-remote-tests.yml`](.github/workflows/rc-aws-remote-tests.yml) (`AWS PR remote tests`) builds its matrix with [`scripts/prepare-aws-matrix-from-integration.py`](scripts/prepare-aws-matrix-from-integration.py), which reads successful jobs from the Integration tests workflow run. Failed integration platforms are skipped automatically.
+[`.github/workflows/rc-aws-remote-tests.yml`](.github/workflows/rc-aws-remote-tests.yml) (**CI — Regolith: AWS EC2 (PR gate)**) builds its matrix with [`scripts/prepare-aws-matrix-from-integration.py`](scripts/prepare-aws-matrix-from-integration.py), which reads successful jobs from the container integration workflow run. Failed integration platforms are skipped automatically.
 
-Manual platform testing: [`.github/workflows/aws-remote-tests.yml`](.github/workflows/aws-remote-tests.yml) (`workflow_dispatch`, all supported platforms).
+Manual platform testing: [`.github/workflows/aws-remote-tests.yml`](.github/workflows/aws-remote-tests.yml) (**CI — Regolith: AWS EC2 (manual)**; `workflow_dispatch`, all supported platforms).
 
 ### Continuous integration (workflow reference)
 
-| Workflow | Trigger | What it runs |
-|----------|---------|----------------|
-| [Unit tests](.github/workflows/unit-tests.yml) | PR, push to `main`, manual | `lint` → `policy` → Ansible unit matrix → Galaxy `validate` (see above) |
-| [Security scan](.github/workflows/trivy.yml) | PR, push to `main`, weekly, manual | Trivy filesystem scan (CRITICAL/HIGH); must pass before integration |
-| [Integration tests](.github/workflows/integration-tests.yml) | After Unit tests on PR/`main`, daily cron, manual | Five container jobs: full install, verify, idempotence, repo transitions |
-| [AWS PR remote tests](.github/workflows/rc-aws-remote-tests.yml) | After integration on feature PRs, manual | Ephemeral EC2 per **successful** integration platform |
-| [AWS remote functional tests](.github/workflows/aws-remote-tests.yml) | Manual | On-demand EC2: pick platform, arch coverage, scenario |
-| [Auto-run release please checks](.github/workflows/auto-run-release-please-checks.yml) | Release PR opened/synced | Re-runs CI blocked by first-time contributor approval on release PRs |
-| [Check Regolith stable pin (docs)](.github/workflows/check-regolith-stable.yml) | Daily cron, manual | Compares `defaults/main.yml` pin with Regolith docs; opens drift issue |
-| [Release Please](.github/workflows/release-please.yml) | Push to `main`, manual | Release PR, Galaxy import on final release |
-| [Release](.github/workflows/release.yml) | Manual only | Recovery Galaxy import for an existing semver tag |
+| Workflow | Display name | Trigger | What it runs |
+|----------|--------------|---------|----------------|
+| [unit-tests.yml](.github/workflows/unit-tests.yml) | CI — Regolith: lint & unit tests | PR, push to `main`, manual | `lint` → `policy` → Ansible unit matrix → Galaxy `validate` (see above) |
+| [trivy.yml](.github/workflows/trivy.yml) | CI — Regolith: security (Trivy) | PR, push to `main`, weekly, manual | Trivy filesystem scan (CRITICAL/HIGH); must pass before integration |
+| [integration-tests.yml](.github/workflows/integration-tests.yml) | CI — Regolith: container integration | After unit workflow on PR/`main`, daily cron, manual | Five container jobs: full install, verify, idempotence, repo transitions |
+| [rc-aws-remote-tests.yml](.github/workflows/rc-aws-remote-tests.yml) | CI — Regolith: AWS EC2 (PR gate) | After integration on feature PRs, manual | Ephemeral EC2 per **successful** integration platform |
+| [aws-remote-tests.yml](.github/workflows/aws-remote-tests.yml) | CI — Regolith: AWS EC2 (manual) | Manual | On-demand EC2: pick platform, arch coverage, scenario |
+| [auto-run-release-please-checks.yml](.github/workflows/auto-run-release-please-checks.yml) | Release — Regolith: unblock release PR CI | Release PR opened/synced | Re-runs CI blocked by first-time contributor approval on release PRs |
+| [check-regolith-stable.yml](.github/workflows/check-regolith-stable.yml) | Maintenance — Regolith: stable pin drift | Daily cron, manual | Compares `defaults/main.yml` pin with Regolith docs; opens drift issue |
+| [release-please.yml](.github/workflows/release-please.yml) | Release — Regolith: version bump | Push to `main`, manual | Release PR, Galaxy import on final release |
+| [release.yml](.github/workflows/release.yml) | Release — Regolith: Galaxy import (manual) | Manual only | Recovery Galaxy import for an existing semver tag |
 
 #### Dependency updates
 
@@ -362,7 +362,7 @@ Repository key fingerprint enforcement is not enabled because this role does not
 #### Further hardening (optional)
 
 - **Repository signing-key rotation:** the role refreshes the installed keyring when downloaded key material changes, but automatic rotation after upstream key changes should still be verified on real hosts when Regolith publishes a new signing key.
-- **Branch protection** on `main`: PR merges require unit tests (Lint, all Unit matrix jobs, Role validation), integration tests (Debian bookworm/trixie, Ubuntu noble/plucky/questing), and Trivy.
+- **Branch protection** on `main`: PR merges require lint & unit jobs (Lint & static analysis, all Unit tests matrix jobs, Galaxy import validation), container integration (Debian bookworm/trixie, Ubuntu noble/plucky/questing), and Trivy.
 - **pip-audit** in CI for Python requirement files (complements Trivy; no lockfile today).
 - **OpenSSF Scorecard** workflow for supply-chain posture on the repo.
 - **CodeQL** is low value here (mostly YAML/Ansible); ansible-lint and Trivy cover more of this role.

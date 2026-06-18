@@ -1,11 +1,11 @@
 ---
-name: Integration tests
+name: CI — Regolith: container integration
 
 on:  # yamllint disable-line rule:truthy
   pull_request:
   workflow_run:
     workflows:
-      - Unit tests
+      - CI — Regolith: lint & unit tests
     types:
       - completed
   schedule:
@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   prerequisites:
-    name: Verify lint and security prerequisites
+    name: Gate: lint, unit & Trivy
     if: >-
       github.event_name == 'pull_request' ||
       github.event_name == 'schedule' ||
@@ -35,7 +35,7 @@ jobs:
     outputs:
       head_sha: ${{ steps.resolve.outputs.head_sha }}
     steps:
-      - name: Fail fast when Unit tests workflow failed
+      - name: Fail fast when lint & unit workflow failed
         if: >-
           github.event_name == 'workflow_run' &&
           github.event.workflow_run.conclusion != 'success'
@@ -57,7 +57,7 @@ jobs:
             echo "head_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Require successful Unit tests and Trivy
+      - name: Require successful lint/unit and Trivy workflows
         if: github.event_name == 'workflow_run' || github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -70,7 +70,7 @@ jobs:
 
       - name: Skip prerequisite API check for scheduled or manual runs
         if: github.event_name != 'workflow_run' && github.event_name != 'pull_request'
-        run: echo "Scheduled and manual integration runs do not wait on Unit tests or Trivy."
+        run: echo "Scheduled and manual integration runs do not wait on lint/unit or Trivy."
 
   integration:
     name: ${{ matrix.label }}
@@ -110,7 +110,7 @@ jobs:
         uses: ./.github/actions/run-integration-test
 
   aws-pr-remote-tests:
-    name: AWS PR remote tests
+    name: AWS EC2 remote tests
     needs:
       - prerequisites
       - integration

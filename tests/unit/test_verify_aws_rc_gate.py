@@ -31,7 +31,7 @@ class VerifyAwsRcGateTests(unittest.TestCase):
         ok, message = verify_aws_jobs(
             [
                 {
-                    "name": "Prepare AWS matrix from integration results",
+                    "name": "Prepare EC2 test matrix",
                     "conclusion": "success",
                 }
             ]
@@ -43,7 +43,7 @@ class VerifyAwsRcGateTests(unittest.TestCase):
         ok, message = verify_aws_jobs(
             [
                 {
-                    "name": "Prepare AWS matrix from integration results",
+                    "name": "Prepare EC2 test matrix",
                     "conclusion": "success",
                 },
                 {"name": "Debian bookworm", "conclusion": "success"},
@@ -57,7 +57,7 @@ class VerifyAwsRcGateTests(unittest.TestCase):
         ok, message = verify_aws_jobs(
             [
                 {
-                    "name": "Prepare AWS matrix from integration results",
+                    "name": "Prepare EC2 test matrix",
                     "conclusion": "success",
                 },
                 {"name": "Debian bookworm", "conclusion": "success"},

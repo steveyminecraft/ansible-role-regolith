@@ -1,5 +1,5 @@
 ---
-name: AWS remote functional tests
+name: CI — Regolith: AWS EC2 (manual)
 
 on:
   workflow_dispatch:
@@ -61,7 +61,7 @@ concurrency:
 
 jobs:
   prepare-matrix:
-    name: Prepare AWS test matrix
+    name: Prepare manual EC2 matrix
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}

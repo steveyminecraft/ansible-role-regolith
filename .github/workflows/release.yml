@@ -1,5 +1,5 @@
 ---
-name: Release
+name: Release — Regolith: Galaxy import (manual)
 
 on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
