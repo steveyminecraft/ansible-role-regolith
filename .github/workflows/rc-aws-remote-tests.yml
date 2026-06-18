@@ -122,9 +122,11 @@ jobs:
           INPUT_SCENARIO: ${{ inputs.scenario || github.event.inputs.scenario || 'regolith-stable' }}
           INPUT_REQUIRE_RC_TAG: ${{ inputs.require_rc_tag || github.event.inputs.require_rc_tag || 'false' }}
           WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id || inputs.integration_workflow_run_id || github.event.inputs.integration_workflow_run_id || '' }}
+          MATRIX_FILE: ${{ runner.temp }}/aws-matrix.json
+          META_FILE: ${{ runner.temp }}/aws-matrix-meta.json
         run: |
           set -euo pipefail
-          args=(--matrix-file "${RUNNER_TEMP}/aws-matrix.json")
+          args=(--matrix-file "${MATRIX_FILE}" --meta-file "${META_FILE}")
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
             args+=(--workflow-run-id "${WORKFLOW_RUN_ID}")
           elif [ "${{ github.event_name }}" = "push" ]; then
@@ -140,17 +142,22 @@ jobs:
             fi
           fi
           python3 scripts/prepare-aws-matrix-from-integration.py "${args[@]}"
-          {
-            echo 'matrix<<MATRIX_EOF'
-            jq -c . "${RUNNER_TEMP}/aws-matrix.json"
-            echo 'MATRIX_EOF'
-          } >> "$GITHUB_OUTPUT"
-          echo "scenario=${INPUT_SCENARIO}" >> "$GITHUB_OUTPUT"
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          from pathlib import Path
+
+          meta = json.loads(Path(os.environ["META_FILE"]).read_text(encoding="utf-8"))
+          matrix = Path(os.environ["MATRIX_FILE"]).read_text(encoding="utf-8").strip()
+          print(f"matrix={matrix}")
+          print(f"git_ref={meta['git_ref']}")
+          print(f"has_matrix={meta['has_matrix']}")
+          print(f"scenario={os.environ['INPUT_SCENARIO']}")
+          PY
 
   aws-rc-remote-tests:
     name: ${{ matrix.label }}
     needs: prepare-matrix
-    if: needs.prepare-matrix.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:
