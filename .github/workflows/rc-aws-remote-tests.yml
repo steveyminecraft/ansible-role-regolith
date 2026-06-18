@@ -145,7 +145,7 @@ jobs:
   aws-rc-remote-tests:
     name: ${{ matrix.label }}
     needs: prepare-matrix
-    if: needs.prepare-matrix.outputs.has_matrix == 'true'
+    if: needs.prepare-matrix.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:
