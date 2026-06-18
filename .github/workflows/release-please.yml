@@ -31,7 +31,8 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          # Default GITHUB_TOKEN; set RELEASE_PLEASE_TOKEN only when a PAT is
+          # needed for RC tag pushes to trigger downstream workflows.
 
   tag-release-candidate:
     name: Tag release candidate for AWS tests
@@ -40,24 +41,20 @@ jobs:
       needs.release-please.outputs.prs_created == 'true'
       && needs.release-please.outputs.release_created != 'true'
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
       - name: Check out release PR branch
         uses: actions/checkout@v6
         with:
           ref: release-please--branches--main
           fetch-depth: 0
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
 
       - name: Create and push RC tag
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if [ -z "${GH_TOKEN:-}" ]; then
-            echo "::error::RELEASE_PLEASE_TOKEN is required to push RC tags."
-            exit 1
-          fi
-
           version="$(python3 -c "import json; print(json.load(open('.release-please-manifest.json'))['.'])")"
           base_tag="v${version}"
           head_sha="$(git rev-parse HEAD)"
