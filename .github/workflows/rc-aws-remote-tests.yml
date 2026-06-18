@@ -124,7 +124,7 @@ jobs:
           WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id || inputs.integration_workflow_run_id || github.event.inputs.integration_workflow_run_id || '' }}
         run: |
           set -euo pipefail
-          args=()
+          args=(--matrix-file "${RUNNER_TEMP}/aws-matrix.json")
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
             args+=(--workflow-run-id "${WORKFLOW_RUN_ID}")
           elif [ "${{ github.event_name }}" = "push" ]; then
@@ -140,6 +140,7 @@ jobs:
             fi
           fi
           python3 scripts/prepare-aws-matrix-from-integration.py "${args[@]}"
+          echo "matrix=$(jq -c . "${RUNNER_TEMP}/aws-matrix.json")" >> "$GITHUB_OUTPUT"
           echo "scenario=${INPUT_SCENARIO}" >> "$GITHUB_OUTPUT"
 
   aws-rc-remote-tests:
