@@ -41,6 +41,9 @@ jobs:
       needs.release-please.outputs.prs_created == 'true'
       && needs.release-please.outputs.release_created != 'true'
     runs-on: ubuntu-24.04
+    outputs:
+      rc_tag: ${{ steps.rc_tag.outputs.tag }}
+      rc_pushed: ${{ steps.rc_tag.outputs.pushed }}
     permissions:
       contents: write
     steps:
@@ -51,6 +54,7 @@ jobs:
           fetch-depth: 0
 
       - name: Create and push RC tag
+        id: rc_tag
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -59,9 +63,11 @@ jobs:
           base_tag="v${version}"
           head_sha="$(git rev-parse HEAD)"
 
-          existing_for_commit="$(git tag -l "${base_tag}-rc.*" --points-at "${head_sha}" | paste -sd ',' - || true)"
+          existing_for_commit="$(git tag -l "${base_tag}-rc.*" --points-at "${head_sha}" | head -1 || true)"
           if [ -n "${existing_for_commit}" ]; then
             echo "RC tag already exists for ${head_sha}: ${existing_for_commit}"
+            echo "tag=${existing_for_commit}" >> "$GITHUB_OUTPUT"
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -78,7 +84,22 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "${rc_tag}" -m "Release candidate for ${base_tag} (release PR ${head_sha::7})" "${head_sha}"
           git push origin "${rc_tag}"
-          echo "Pushed ${rc_tag}; AWS RC remote tests will start automatically."
+          echo "Pushed ${rc_tag}."
+          echo "tag=${rc_tag}" >> "$GITHUB_OUTPUT"
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+  aws-rc-remote-tests:
+    name: AWS RC remote tests
+    needs: tag-release-candidate
+    if: needs.tag-release-candidate.outputs.rc_pushed == 'true'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/rc-aws-remote-tests.yml
+    with:
+      git_ref: ${{ needs.tag-release-candidate.outputs.rc_tag }}
+      scenario: regolith-stable
+    secrets: inherit
 
   publish-galaxy:
     name: Publish Galaxy

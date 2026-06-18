@@ -7,7 +7,7 @@ assume AWS role → launch ephemeral EC2 → apply role → verify → destroy.
 
 | Workflow | Trigger | Default target |
 |----------|---------|----------------|
-| `rc-aws-remote-tests.yml` | `v*-rc*` tags (auto from Release Please) | Ubuntu 24.04 amd64, `regolith-stable` |
+| `rc-aws-remote-tests.yml` | `v*-rc*` tags, **auto from Release Please**, manual | Ubuntu 24.04 amd64, `regolith-stable` |
 | `aws-remote-tests.yml` | Manual dispatch | Configurable OS/arch/scenario |
 
 ## Required GitHub configuration
@@ -26,8 +26,19 @@ in AWS-Cloud `build-account-isolation/build`):
 Repository secrets:
 
 - `AWS_TEST_SSH_PRIVATE_KEY` (shared with ansible-pihole remote tests)
-- `RELEASE_PLEASE_TOKEN` (for auto RC tags in Release Please)
+- `RELEASE_PLEASE_TOKEN` (optional; unblocks release-PR CI approval and PAT-pushed RC tags)
 - `GALAXY_API_KEY` (for Galaxy publish on release)
+
+## Automatic RC test flow
+
+When Release Please opens or updates a release PR on `main`:
+
+1. `tag-release-candidate` pushes `vX.Y.Z-rc.N` on the release PR branch.
+2. `aws-rc-remote-tests` runs immediately via `workflow_call` (does not rely on tag-push
+   workflow triggers, which `GITHUB_TOKEN` cannot fire).
+
+RC tags still trigger `rc-aws-remote-tests.yml` when pushed with a PAT (for example after
+configuring `RELEASE_PLEASE_TOKEN`).
 
 ## OIDC trust
 
