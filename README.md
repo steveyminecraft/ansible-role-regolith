@@ -177,7 +177,7 @@ Yamllint follows `.yamllint`, warning on lines longer than 150 characters while 
 
 ### Test pyramid
 
-Tests run in layers from fast/cheap to slow/realistic. Feature-branch PRs exercise every layer **except AWS**. AWS RC tests run only on the Release Please PR after merge to `main`.
+Tests run in layers from fast/cheap to slow/realistic. Feature-branch PRs exercise every layer including AWS after integration passes. Release Please PRs skip AWS; Galaxy publish has no AWS gate.
 
 | Layer | What it validates | CI workflow |
 |-------|-------------------|-------------|
@@ -316,7 +316,7 @@ push to main
 
 [`.github/workflows/rc-aws-remote-tests.yml`](.github/workflows/rc-aws-remote-tests.yml) (`AWS PR remote tests`) builds its matrix with [`scripts/prepare-aws-matrix-from-integration.py`](scripts/prepare-aws-matrix-from-integration.py), which reads successful jobs from the Integration tests workflow run. Failed integration platforms are skipped automatically.
 
-Manual full-matrix testing: [`.github/workflows/aws-remote-tests.yml`](.github/workflows/aws-remote-tests.yml) (`workflow_dispatch`).
+Manual platform testing: [`.github/workflows/aws-remote-tests.yml`](.github/workflows/aws-remote-tests.yml) (`workflow_dispatch`, all supported platforms).
 
 ### Continuous integration (workflow reference)
 
@@ -324,9 +324,9 @@ Manual full-matrix testing: [`.github/workflows/aws-remote-tests.yml`](.github/w
 |----------|---------|----------------|
 | [Unit tests](.github/workflows/unit-tests.yml) | PR, push to `main`, manual | `lint` → `policy` → Ansible unit matrix → Galaxy `validate` (see above) |
 | [Security scan](.github/workflows/trivy.yml) | PR, push to `main`, weekly, manual | Trivy filesystem scan (CRITICAL/HIGH); must pass before integration |
-| [Integration tests](.github/workflows/integration-tests.yml) | After Unit tests on PR/`main`, daily cron, manual | Six container jobs: full install, verify, idempotence, repo transitions |
+| [Integration tests](.github/workflows/integration-tests.yml) | After Unit tests on PR/`main`, daily cron, manual | Five container jobs: full install, verify, idempotence, repo transitions |
 | [AWS PR remote tests](.github/workflows/rc-aws-remote-tests.yml) | After integration on feature PRs, manual | Ephemeral EC2 per **successful** integration platform |
-| [AWS remote tests](.github/workflows/aws-remote-tests.yml) | Manual | On-demand EC2: pick OS version, arch, scenario |
+| [AWS remote functional tests](.github/workflows/aws-remote-tests.yml) | Manual | On-demand EC2: pick platform, arch coverage, scenario |
 | [Auto-run release please checks](.github/workflows/auto-run-release-please-checks.yml) | Release PR opened/synced | Re-runs CI blocked by first-time contributor approval on release PRs |
 | [Check Regolith stable pin (docs)](.github/workflows/check-regolith-stable.yml) | Daily cron, manual | Compares `defaults/main.yml` pin with Regolith docs; opens drift issue |
 | [Release Please](.github/workflows/release-please.yml) | Push to `main`, manual | Release PR, Galaxy import on final release |

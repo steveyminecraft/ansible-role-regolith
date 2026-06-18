@@ -13,8 +13,20 @@ on:
           - regolith-stable
           - regolith-main
           - regolith-preview
+      platform:
+        description: "Target platform (matches integration test catalog)"
+        type: choice
+        required: true
+        default: ubuntu-noble
+        options:
+          - debian-bookworm
+          - debian-trixie
+          - ubuntu-noble
+          - ubuntu-plucky
+          - ubuntu-questing
+          - all-platforms
       platform_coverage:
-        description: "How many CPU architectures to exercise"
+        description: "How many CPU architectures to exercise per selected platform"
         type: choice
         required: true
         default: one-arch
@@ -22,20 +34,13 @@ on:
           - one-arch
           - all-archs
       arch:
-        description: "CPU architecture for single profile"
+        description: "CPU architecture when platform coverage is one-arch"
         type: choice
         required: true
         default: amd64
         options:
           - amd64
           - arm64
-      os_version:
-        description: "Ubuntu version for the ephemeral host"
-        type: choice
-        required: true
-        default: "24.04"
-        options:
-          - "24.04"
       skip_transitions:
         description: "Skip repository transition playbooks"
         type: boolean
@@ -64,50 +69,23 @@ jobs:
       skip_transitions: ${{ steps.matrix.outputs.skip_transitions }}
       aws_region: ${{ steps.matrix.outputs.aws_region }}
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
       - name: Resolve matrix
         id: matrix
         env:
+          INPUT_PLATFORM: ${{ github.event.inputs.platform }}
           INPUT_PLATFORM_COVERAGE: ${{ github.event.inputs.platform_coverage }}
           INPUT_ARCH: ${{ github.event.inputs.arch }}
           INPUT_SCENARIO: ${{ github.event.inputs.scenario }}
-          INPUT_OS_VERSION: ${{ github.event.inputs.os_version }}
           INPUT_SKIP_TRANSITIONS: ${{ github.event.inputs.skip_transitions }}
           INPUT_AWS_REGION: ${{ github.event.inputs.aws_region }}
           DEFAULT_AWS_REGION: ${{ vars.AWS_TEST_REGION }}
-        run: |
-          python3 - <<'PY' >> "$GITHUB_OUTPUT"
-          import json
-          import os
-
-          profile = (os.environ.get("INPUT_PLATFORM_COVERAGE") or "one-arch").strip()
-          scenario = (os.environ.get("INPUT_SCENARIO") or "regolith-stable").strip()
-          os_version = (os.environ.get("INPUT_OS_VERSION") or "24.04").strip()
-          skip_transitions = (os.environ.get("INPUT_SKIP_TRANSITIONS") or "false").strip().lower()
-          if profile in ("all-archs", "full"):
-              matrix = [
-                  {"os_family": "ubuntu", "os_version": os_version, "arch": "amd64"},
-                  {"os_family": "ubuntu", "os_version": os_version, "arch": "arm64"},
-              ]
-          else:
-              matrix = [{
-                  "os_family": "ubuntu",
-                  "os_version": os_version,
-                  "arch": (os.environ.get("INPUT_ARCH") or "amd64").strip(),
-              }]
-
-          region = (
-              (os.environ.get("INPUT_AWS_REGION") or "").strip()
-              or (os.environ.get("DEFAULT_AWS_REGION") or "").strip()
-          )
-
-          print(f"matrix={json.dumps({'include': matrix})}")
-          print(f"scenario={scenario}")
-          print(f"skip_transitions={skip_transitions}")
-          print(f"aws_region={region}")
-          PY
+        run: python3 scripts/prepare_manual_aws_matrix.py
 
   aws-remote-tests:
-    name: AWS integration — Ubuntu ${{ matrix.os_version }} / ${{ matrix.arch }}
+    name: ${{ matrix.label }}
     needs: prepare-matrix
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -119,11 +97,13 @@ jobs:
       AWS_TEST_SCENARIO: ${{ needs.prepare-matrix.outputs.scenario }}
       AWS_OS_FAMILY: ${{ matrix.os_family }}
       AWS_OS_VERSION: ${{ matrix.os_version }}
+      AWS_OS_CODENAME: ${{ matrix.os_codename }}
       AWS_ARCH: ${{ matrix.arch }}
       AWS_HOST_NAME: ${{ matrix.os_family }}-${{ matrix.os_version }}
+      AWS_ANSIBLE_USER: ${{ matrix.ansible_user }}
       AWS_SUBNET_ID: ${{ vars.AWS_TEST_SUBNET_ID }}
       AWS_KEY_NAME: ${{ vars.AWS_TEST_KEY_NAME }}
-      AWS_SSH_CIDR: ${{ vars.AWS_TEST_SSH_CIDR }}
+      AWS_SSH_CIDR: ${{ vars.AWS_TEST_SSH_CIDR || '0.0.0.0/0' }}
       AWS_INSTANCE_TYPE: ${{ matrix.arch == 'arm64' && vars.AWS_TEST_INSTANCE_TYPE_ARM64 || vars.AWS_TEST_INSTANCE_TYPE_AMD64 }}
       AWS_TEST_PREFIX: ansible-regolith-remote
       AWS_PROJECT_TAG: ansible-role-regolith
@@ -133,18 +113,17 @@ jobs:
         run: |
           {
             echo "AWS_SSH_PRIVATE_KEY_PATH=${RUNNER_TEMP}/aws-test.key"
-            echo "AWS_STATE_FILE=${RUNNER_TEMP}/aws-remote-state-${{ matrix.os_version }}-${{ matrix.arch }}.json"
-            echo "AWS_INVENTORY_FILE=${RUNNER_TEMP}/aws-remote-inventory-${{ matrix.os_version }}-${{ matrix.arch }}.yml"
-            echo "AWS_METADATA_FILE=${RUNNER_TEMP}/aws-remote-metadata-${{ matrix.os_version }}-${{ matrix.arch }}.json"
-            echo "AWS_CLEANUP_STATUS_FILE=${RUNNER_TEMP}/aws-remote-cleanup-${{ matrix.os_version }}-${{ matrix.arch }}.json"
+            echo "AWS_STATE_FILE=${RUNNER_TEMP}/aws-remote-state-${{ matrix.platform_id }}-${{ matrix.arch }}.json"
+            echo "AWS_INVENTORY_FILE=${RUNNER_TEMP}/aws-remote-inventory-${{ matrix.platform_id }}-${{ matrix.arch }}.yml"
+            echo "AWS_METADATA_FILE=${RUNNER_TEMP}/aws-remote-metadata-${{ matrix.platform_id }}-${{ matrix.arch }}.json"
+            echo "AWS_CLEANUP_STATUS_FILE=${RUNNER_TEMP}/aws-remote-cleanup-${{ matrix.platform_id }}-${{ matrix.arch }}.json"
           } >> "$GITHUB_ENV"
 
-      - name: Validate required repository configuration
+      - name: Validate repository configuration
         run: |
           missing=0
-          for var_name in AWS_REGION AWS_SUBNET_ID AWS_KEY_NAME; do
-            value="${!var_name:-}"
-            if [ -z "$value" ]; then
+          for var_name in AWS_REGION AWS_SUBNET_ID AWS_KEY_NAME AWS_INSTANCE_TYPE AWS_ANSIBLE_USER; do
+            if [ -z "${!var_name:-}" ]; then
               echo "Missing required variable: $var_name"
               missing=1
             fi
@@ -157,9 +136,7 @@ jobs:
             echo "Missing required secret: AWS_TEST_SSH_PRIVATE_KEY"
             missing=1
           fi
-          if [ "$missing" -ne 0 ]; then
-            exit 1
-          fi
+          [ "$missing" -eq 0 ]
 
       - name: Check out repository
         uses: actions/checkout@v6
@@ -169,7 +146,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_TEST_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-          role-session-name: ansible-regolith-aws-tests
+          role-session-name: ansible-regolith-remote-${{ matrix.platform_id }}-${{ matrix.arch }}
 
       - name: Setup Ansible test environment
         uses: ./.github/actions/setup-ansible-test

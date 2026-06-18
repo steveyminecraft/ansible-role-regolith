@@ -32,7 +32,8 @@ gh workflow run "AWS PR remote tests" --ref main \
   -f integration_workflow_run_id=<integration-run-id>
 ```
 
-On-demand single-platform testing: [aws-remote-tests.yml](../.github/workflows/aws-remote-tests.yml).
+On-demand platform testing: [aws-remote-tests.yml](../.github/workflows/aws-remote-tests.yml)
+(`workflow_dispatch`, all supported integration platforms).
 
 ## Prerequisites
 
