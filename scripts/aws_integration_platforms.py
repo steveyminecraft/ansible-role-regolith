@@ -37,15 +37,6 @@ PLATFORMS: tuple[AwsIntegrationPlatform, ...] = (
         ansible_user="admin",
     ),
     AwsIntegrationPlatform(
-        platform_id="ubuntu-jammy",
-        integration_job_name="Ubuntu 22.04 (jammy)",
-        os_family="ubuntu",
-        os_version="22.04",
-        os_codename="jammy",
-        arch="amd64",
-        ansible_user="ubuntu",
-    ),
-    AwsIntegrationPlatform(
         platform_id="ubuntu-noble",
         integration_job_name="Ubuntu 24.04 (noble)",
         os_family="ubuntu",

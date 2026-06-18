@@ -1,7 +1,6 @@
 ---
 regolith_supported_distributions:
   Ubuntu:
-    - jammy
     - noble
     - plucky
     - questing

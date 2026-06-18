@@ -1,6 +1,7 @@
 ---
 - name: Verify Regolith APT repository configuration
   hosts: all
+  become: true
   gather_facts: false
   tasks:
     - name: Check modern Regolith sources list entry exists
