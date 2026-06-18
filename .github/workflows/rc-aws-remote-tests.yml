@@ -155,6 +155,20 @@ jobs:
           print(f"scenario={os.environ['INPUT_SCENARIO']}")
           PY
 
+  debug-matrix-output:
+    name: Debug matrix job output
+    needs: prepare-matrix
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Show prepare-matrix outputs
+        env:
+          MATRIX: ${{ needs.prepare-matrix.outputs.matrix }}
+          HAS_MATRIX: ${{ needs.prepare-matrix.outputs.has_matrix }}
+        run: |
+          echo "has_matrix=${HAS_MATRIX}"
+          echo "matrix_length=${#MATRIX}"
+          echo "matrix_prefix=${MATRIX:0:120}"
+
   aws-rc-remote-tests:
     name: ${{ matrix.label }}
     needs: prepare-matrix
