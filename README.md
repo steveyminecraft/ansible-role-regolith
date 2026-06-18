@@ -261,9 +261,10 @@ python -m unittest discover -s tests/unit -p 'test_*.py' -v
 
 ### Integration tests workflow
 
-[`.github/workflows/integration-tests.yml`](.github/workflows/integration-tests.yml) starts after **Unit tests** complete on PRs
-and `main` pushes. A prerequisite step waits for **Trivy** (`Security scan`) to pass on the same commit before the six
-container jobs run. Scheduled and manual runs skip that gate.
+[`.github/workflows/integration-tests.yml`](.github/workflows/integration-tests.yml) starts after **Unit tests** and **Trivy** pass on PRs
+and `main` pushes. On pull requests it waits for both workflows on the PR head commit; after merge to
+`main`, the same gate runs via `workflow_run` when Unit tests complete. Scheduled and manual runs skip
+that gate.
 
 Six parallel container jobs (same platforms as the supported-platforms table):
 

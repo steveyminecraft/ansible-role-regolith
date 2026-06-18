@@ -2,6 +2,7 @@
 name: Integration tests
 
 on:  # yamllint disable-line rule:truthy
+  pull_request:
   workflow_run:
     workflows:
       - Unit tests
@@ -16,7 +17,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: integration-tests-${{ github.workflow }}-${{ github.event.workflow_run.head_sha || github.sha }}
+  group: integration-tests-${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -50,12 +51,14 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
             echo "head_sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "head_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
           else
             echo "head_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Require successful Unit tests and Trivy
-        if: github.event_name == 'workflow_run'
+        if: github.event_name == 'workflow_run' || github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
@@ -66,7 +69,7 @@ jobs:
             --timeout-minutes 90
 
       - name: Skip prerequisite API check for scheduled or manual runs
-        if: github.event_name != 'workflow_run'
+        if: github.event_name != 'workflow_run' && github.event_name != 'pull_request'
         run: echo "Scheduled and manual integration runs do not wait on Unit tests or Trivy."
 
   integration:
