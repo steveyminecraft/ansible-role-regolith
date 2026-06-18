@@ -80,6 +80,9 @@ jobs:
       has_matrix: ${{ steps.matrix.outputs.has_matrix }}
       scenario: ${{ steps.matrix.outputs.scenario }}
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
       - name: Resolve AWS matrix from integration jobs
         id: matrix
         env:
