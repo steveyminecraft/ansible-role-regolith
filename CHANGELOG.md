@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.6.0](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.5.3...v3.6.0) (2026-06-18)
+
+
+### Features
+
+* add testing pyramid and AWS remote harness ([01611d9](https://github.com/steveyminecraft/ansible-role-regolith/commit/01611d93048df796fe383152fdffdd3f0e3688b2))
+* add testing pyramid and AWS remote harness ([f8c1e5c](https://github.com/steveyminecraft/ansible-role-regolith/commit/f8c1e5c9baf7f856799456582d8eec6a8cc312a3))
+
+
+### Bug Fixes
+
+* allow vagrant Molecule scenarios without dependency key ([4fe4f7d](https://github.com/steveyminecraft/ansible-role-regolith/commit/4fe4f7d6bc5ae733b1fe6c09a7e7d2fb2ba393cd))
+* install ansible.posix for JSON stdout callback in CI ([c75ef6f](https://github.com/steveyminecraft/ansible-role-regolith/commit/c75ef6feb7886979b5a65e5bf632e87a43b05bca))
+* restore GITHUB_TOKEN for Release Please after invalid PAT ([ba62d62](https://github.com/steveyminecraft/ansible-role-regolith/commit/ba62d62894c952f08a7cb12ddb2c23a6d53521aa))
+* restore PLAY RECAP idempotence check in container integration tests ([7d18c57](https://github.com/steveyminecraft/ansible-role-regolith/commit/7d18c57b1f42e235c29d2894ee4b7c6991dd3297))
+* satisfy ansible-lint and stabilize idempotence JSON parsing ([34f377b](https://github.com/steveyminecraft/ansible-role-regolith/commit/34f377bb9a03d0f24fe384214a1d02c5887040a7))
+* use workspace path for idempotence JSON in container jobs ([074a26e](https://github.com/steveyminecraft/ansible-role-regolith/commit/074a26ea7fb25ce737d49928e3bb621f128f30b9))
+
 ## [3.5.3](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.5.2...v3.5.3) (2026-05-22)
 
 
