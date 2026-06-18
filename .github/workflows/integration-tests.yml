@@ -21,28 +21,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  block-on-failed-prerequisite:
-    name: Reject failed lint or security workflow
-    if: >-
-      github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion != 'success'
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Fail fast when Unit tests or Trivy failed
-        run: |
-          echo "${{ github.event.workflow_run.name }} concluded ${{ github.event.workflow_run.conclusion }}."
-          exit 1
-
   prerequisites:
     name: Verify lint and security prerequisites
-    needs: block-on-failed-prerequisite
-    if: >-
-      always() &&
-      needs.block-on-failed-prerequisite.result == 'skipped'
     runs-on: ubuntu-24.04
     outputs:
       head_sha: ${{ steps.resolve.outputs.head_sha }}
     steps:
+      - name: Fail fast when Unit tests workflow failed
+        if: >-
+          github.event_name == 'workflow_run' &&
+          github.event.workflow_run.conclusion != 'success'
+        run: |
+          echo "${{ github.event.workflow_run.name }} concluded ${{ github.event.workflow_run.conclusion }}."
+          exit 1
+
       - name: Check out repository
         uses: actions/checkout@v6
 
