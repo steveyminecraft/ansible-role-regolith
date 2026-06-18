@@ -154,6 +154,8 @@ fi
 
 mkdir -p "$(dirname "${AWS_STATE_FILE}")" "$(dirname "${AWS_INVENTORY_FILE}")" "$(dirname "${AWS_METADATA_FILE}")"
 
+inventory_host="${AWS_HOST_NAME:-${AWS_OS_FAMILY}-${AWS_OS_VERSION:-unknown}}"
+
 cat > "${AWS_STATE_FILE}" <<EOF
 {
   "region": "${AWS_REGION}",
@@ -171,6 +173,7 @@ cat > "${AWS_METADATA_FILE}" <<EOF
   "os_codename": "${AWS_OS_CODENAME:-}",
   "ansible_user": "${AWS_ANSIBLE_USER}",
   "arch": "${AWS_ARCH}",
+  "inventory_host": "${inventory_host}",
   "instance_ids": ["${instance_id}"],
   "public_ips": ["${public_ip}"],
   "private_ips": ["${private_ip}"],
@@ -181,13 +184,17 @@ EOF
 
 cp "${AWS_INVENTORY_TEMPLATE}" "${AWS_INVENTORY_FILE}"
 
-PUBLIC_IP="${public_ip}" AWS_TEST_SCENARIO="${AWS_TEST_SCENARIO}" python3 - <<'PY'
+PUBLIC_IP="${public_ip}" \
+AWS_TEST_SCENARIO="${AWS_TEST_SCENARIO}" \
+INVENTORY_HOST="${inventory_host}" \
+python3 - <<'PY'
 import os
 from pathlib import Path
 
 inventory_path = Path(os.environ["AWS_INVENTORY_FILE"])
 content = inventory_path.read_text(encoding="utf-8")
 replacements = {
+    "REPLACE_HOST_NAME": os.environ["INVENTORY_HOST"],
     "REPLACE_PUBLIC_IP": os.environ["PUBLIC_IP"],
     "REPLACE_SSH_KEY_PATH": os.environ["AWS_SSH_PRIVATE_KEY_PATH"],
     "REPLACE_ANSIBLE_USER": os.environ["AWS_ANSIBLE_USER"],
@@ -206,6 +213,7 @@ PY
 
 echo "Created ephemeral AWS test environment:"
 echo "  region: ${AWS_REGION}"
+echo "  inventory_host: ${inventory_host}"
 echo "  instance_id: ${instance_id}"
 echo "  public_ip: ${public_ip}"
 echo "  inventory: ${AWS_INVENTORY_FILE}"

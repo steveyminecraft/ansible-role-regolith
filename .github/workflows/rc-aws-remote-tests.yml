@@ -107,6 +107,7 @@ jobs:
       AWS_OS_VERSION: ${{ matrix.os_version }}
       AWS_OS_CODENAME: ${{ matrix.os_codename }}
       AWS_ARCH: ${{ matrix.arch }}
+      AWS_HOST_NAME: ${{ matrix.os_family }}-${{ matrix.os_version }}
       AWS_ANSIBLE_USER: ${{ matrix.ansible_user }}
       AWS_SUBNET_ID: ${{ vars.AWS_TEST_SUBNET_ID }}
       AWS_KEY_NAME: ${{ vars.AWS_TEST_KEY_NAME }}

@@ -120,6 +120,7 @@ jobs:
       AWS_OS_FAMILY: ${{ matrix.os_family }}
       AWS_OS_VERSION: ${{ matrix.os_version }}
       AWS_ARCH: ${{ matrix.arch }}
+      AWS_HOST_NAME: ${{ matrix.os_family }}-${{ matrix.os_version }}
       AWS_SUBNET_ID: ${{ vars.AWS_TEST_SUBNET_ID }}
       AWS_KEY_NAME: ${{ vars.AWS_TEST_KEY_NAME }}
       AWS_SSH_CIDR: ${{ vars.AWS_TEST_SSH_CIDR }}
