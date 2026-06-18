@@ -47,6 +47,11 @@ When Release Please opens or updates a release PR on `main`:
 
 `v*-rc*` tag pushes still trigger the same workflow (with RC-tag gating) when using a PAT.
 
+**Note:** `workflow_run` payloads often report `head_branch: main` even when integration
+ran on `release-please--branches--main`. The AWS workflow resolves the real branch via
+[`scripts/detect_release_pr_integration.py`](../scripts/detect_release_pr_integration.py)
+before starting EC2 jobs.
+
 ## Galaxy publish gate
 
 When Release Please creates stable tag `vX.Y.Z`, [release-please.yml](../.github/workflows/release-please.yml)
