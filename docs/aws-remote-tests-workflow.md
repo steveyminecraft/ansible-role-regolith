@@ -31,6 +31,12 @@ Repository secrets:
 
 ## Automatic RC test flow
 
+On every PR and `main` push:
+
+1. **Unit tests** (`lint` → `policy` → `unit` → `validate`) and **Trivy** run in parallel.
+2. When Unit tests complete, **Integration tests** start and wait until Trivy has also passed.
+3. On the Release Please PR only: when integration completes, `rc-aws-remote-tests.yml` starts via `workflow_run`.
+
 When Release Please opens or updates a release PR on `main`:
 
 1. `tag-release-candidate` pushes `vX.Y.Z-rc.N` on the release PR branch.
@@ -40,6 +46,20 @@ When Release Please opens or updates a release PR on `main`:
    Failed integration platforms are skipped automatically.
 
 `v*-rc*` tag pushes still trigger the same workflow (with RC-tag gating) when using a PAT.
+
+## Galaxy publish gate
+
+When Release Please creates stable tag `vX.Y.Z`, [release-please.yml](../.github/workflows/release-please.yml)
+runs [`scripts/verify_aws_rc_gate.py`](../scripts/verify_aws_rc_gate.py) before importing to Galaxy. Publication
+is blocked unless:
+
+1. An RC tag exists for that version (`vX.Y.Z-rc.N`).
+2. The latest completed **AWS RC remote tests** workflow run for that RC commit succeeded.
+3. At least one AWS platform job ran and every AWS platform job succeeded.
+
+If AWS tests fail on the release PR, merge still creates the GitHub release and tag, but Galaxy import
+is skipped until AWS passes and you re-run the manual [release.yml](../.github/workflows/release.yml)
+recovery workflow (or fix and cut a new release).
 
 ## OIDC trust
 
