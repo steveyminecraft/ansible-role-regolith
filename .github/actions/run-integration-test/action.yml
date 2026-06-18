@@ -23,7 +23,7 @@ runs:
         set -o pipefail
         # RUNNER_TEMP points at the host filesystem and is not mounted in container jobs.
         json_output="${GITHUB_WORKSPACE}/.regolith-idempotence.json"
-        ANSIBLE_STDOUT_CALLBACK=ansible.builtin.json \
+        ANSIBLE_STDOUT_CALLBACK=ansible.posix.json \
           ansible-playbook -i 'localhost,' -c local molecule/common/converge.yml \
           > "${json_output}" 2>"${json_output}.stderr"
         cat "${json_output}.stderr" >&2 || true

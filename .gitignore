@@ -1,6 +1,7 @@
 venv
 .venv/
 .ci-venv/
+.regolith-idempotence.json*
 __pycache__/
 *.py[cod]
 .env

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Parse ansible.builtin.json playbook output and fail when changed > 0."""
+"""Parse ansible.posix.json playbook output and fail when changed > 0."""
 
 from __future__ import annotations
 
