@@ -1,0 +1,84 @@
+---
+- name: Assert Ubuntu hosts use ubuntu package list
+  ansible.builtin.set_fact:
+    ansible_facts: >-
+      {{
+        ansible_facts | default({})
+        | combine({
+            'os_family': 'Debian',
+            'distribution': 'Ubuntu',
+            'distribution_release': 'noble',
+            'architecture': 'x86_64',
+          }, recursive=True)
+      }}
+    regolith_distribution: Ubuntu
+
+- name: Load host facts for Ubuntu package path test
+  ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/facts.yml"
+
+- name: Validate platform for Ubuntu package path test
+  ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/validate.yml"
+
+- name: Define repository facts for Ubuntu package path test
+  ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/repository_facts.yml"
+
+- name: Assert Ubuntu distribution packages resolve to ubuntu list
+  ansible.builtin.assert:
+    that:
+      - regolith_distribution_packages == regolith_ubuntu_packages
+      - regolith_distribution_packages == regolith_packages
+
+- name: Assert Debian hosts use debian package list
+  ansible.builtin.set_fact:
+    ansible_facts: >-
+      {{
+        ansible_facts | default({})
+        | combine({
+            'distribution': 'Debian',
+            'distribution_release': 'bookworm',
+          }, recursive=True)
+      }}
+    regolith_distribution: Debian
+
+- name: Load host facts for Debian package path test
+  ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/facts.yml"
+
+- name: Validate platform for Debian package path test
+  ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/validate.yml"
+
+- name: Define repository facts for Debian package path test
+  ansible.builtin.include_tasks: "{{ regolith_role_path }}/tasks/repository_facts.yml"
+
+- name: Assert Debian distribution packages resolve to debian list
+  ansible.builtin.assert:
+    that:
+      - regolith_distribution_packages == regolith_debian_packages
+      - regolith_distribution_packages == regolith_packages
+
+- name: Assert extra packages can be composed into install list
+  ansible.builtin.assert:
+    that:
+      - regolith_test_composed_packages == regolith_test_expected_composed_packages
+  vars:
+    regolith_test_extra_packages:
+      - regolith-compositor-picom-glx
+    regolith_test_base_packages:
+      - regolith-desktop
+      - xdg-desktop-portal-regolith
+    regolith_test_session_packages:
+      - regolith-session-flashback
+    regolith_test_look_packages:
+      - regolith-look-lascaille
+    regolith_test_composed_packages: >-
+      {{
+        regolith_test_base_packages
+        + regolith_test_session_packages
+        + regolith_test_look_packages
+        + regolith_test_extra_packages
+      }}
+    regolith_test_expected_composed_packages:
+      - regolith-desktop
+      - xdg-desktop-portal-regolith
+      - regolith-session-flashback
+      - regolith-look-lascaille
+      - regolith-compositor-picom-glx

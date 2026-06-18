@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# Run molecule test for every scenario (or a selected subset).
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$repo_root"
+
+collect_scenarios() {
+  local scenario_dir scenario_name
+  local -a found=()
+
+  for scenario_dir in molecule/*; do
+    [[ -d "$scenario_dir" ]] || continue
+    [[ -f "$scenario_dir/molecule.yml" ]] || continue
+    scenario_name="$(basename "$scenario_dir")"
+    found+=("$scenario_name")
+  done
+
+  if [[ ${#found[@]} -eq 0 ]]; then
+    echo "No Molecule scenarios found under $repo_root/molecule" >&2
+    exit 1
+  fi
+
+  printf '%s\n' "${found[@]}" | sort
+}
+
+print_usage() {
+  cat <<'EOF'
+Usage:
+  ./scripts/molecule-test-all [--list] [scenario ...]
+
+Options:
+  --list         Print discovered scenarios and exit.
+  -h, --help     Show help.
+
+If no scenarios are passed, all scenarios in molecule/* are tested.
+EOF
+}
+
+declare -a selected=()
+list_only=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --list)
+      list_only=true
+      shift
+      ;;
+    -h|--help)
+      print_usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      echo "Unknown option: $1" >&2
+      print_usage >&2
+      exit 2
+      ;;
+    *)
+      selected+=("$1")
+      shift
+      ;;
+  esac
+done
+
+mapfile -t all_scenarios < <(collect_scenarios)
+
+if $list_only; then
+  printf '%s\n' "${all_scenarios[@]}"
+  exit 0
+fi
+
+if [[ ${#selected[@]} -eq 0 ]]; then
+  selected=("${all_scenarios[@]}")
+fi
+
+for scenario in "${selected[@]}"; do
+  echo "==> molecule test -s ${scenario}"
+  molecule test -s "${scenario}"
+done
+
+echo "All selected Molecule scenarios passed."

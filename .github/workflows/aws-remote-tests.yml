@@ -1,0 +1,200 @@
+---
+name: AWS remote functional tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "Regolith deployment to bootstrap and verify on ephemeral EC2"
+        type: choice
+        required: true
+        default: regolith-stable
+        options:
+          - regolith-stable
+          - regolith-main
+          - regolith-preview
+      platform_coverage:
+        description: "How many CPU architectures to exercise"
+        type: choice
+        required: true
+        default: one-arch
+        options:
+          - one-arch
+          - all-archs
+      arch:
+        description: "CPU architecture for single profile"
+        type: choice
+        required: true
+        default: amd64
+        options:
+          - amd64
+          - arm64
+      os_version:
+        description: "Ubuntu version for the ephemeral host"
+        type: choice
+        required: true
+        default: "24.04"
+        options:
+          - "24.04"
+          - "22.04"
+      skip_transitions:
+        description: "Skip repository transition playbooks"
+        type: boolean
+        required: true
+        default: false
+      aws_region:
+        description: "AWS region override (optional)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: aws-remote-tests-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  prepare-matrix:
+    name: Prepare AWS test matrix
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      scenario: ${{ steps.matrix.outputs.scenario }}
+      skip_transitions: ${{ steps.matrix.outputs.skip_transitions }}
+      aws_region: ${{ steps.matrix.outputs.aws_region }}
+    steps:
+      - name: Resolve matrix
+        id: matrix
+        env:
+          INPUT_PLATFORM_COVERAGE: ${{ github.event.inputs.platform_coverage }}
+          INPUT_ARCH: ${{ github.event.inputs.arch }}
+          INPUT_SCENARIO: ${{ github.event.inputs.scenario }}
+          INPUT_OS_VERSION: ${{ github.event.inputs.os_version }}
+          INPUT_SKIP_TRANSITIONS: ${{ github.event.inputs.skip_transitions }}
+          INPUT_AWS_REGION: ${{ github.event.inputs.aws_region }}
+          DEFAULT_AWS_REGION: ${{ vars.AWS_TEST_REGION }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+
+          profile = (os.environ.get("INPUT_PLATFORM_COVERAGE") or "one-arch").strip()
+          scenario = (os.environ.get("INPUT_SCENARIO") or "regolith-stable").strip()
+          os_version = (os.environ.get("INPUT_OS_VERSION") or "24.04").strip()
+          skip_transitions = (os.environ.get("INPUT_SKIP_TRANSITIONS") or "false").strip().lower()
+          if profile in ("all-archs", "full"):
+              matrix = [
+                  {"os_family": "ubuntu", "os_version": os_version, "arch": "amd64"},
+                  {"os_family": "ubuntu", "os_version": os_version, "arch": "arm64"},
+              ]
+          else:
+              matrix = [{
+                  "os_family": "ubuntu",
+                  "os_version": os_version,
+                  "arch": (os.environ.get("INPUT_ARCH") or "amd64").strip(),
+              }]
+
+          region = (
+              (os.environ.get("INPUT_AWS_REGION") or "").strip()
+              or (os.environ.get("DEFAULT_AWS_REGION") or "").strip()
+          )
+
+          print(f"matrix={json.dumps({'include': matrix})}")
+          print(f"scenario={scenario}")
+          print(f"skip_transitions={skip_transitions}")
+          print(f"aws_region={region}")
+          PY
+
+  aws-remote-tests:
+    name: AWS integration — Ubuntu ${{ matrix.os_version }} / ${{ matrix.arch }}
+    needs: prepare-matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
+    env:
+      AWS_REGION: ${{ needs.prepare-matrix.outputs.aws_region }}
+      AWS_TEST_SCENARIO: ${{ needs.prepare-matrix.outputs.scenario }}
+      AWS_OS_FAMILY: ${{ matrix.os_family }}
+      AWS_OS_VERSION: ${{ matrix.os_version }}
+      AWS_ARCH: ${{ matrix.arch }}
+      AWS_SUBNET_ID: ${{ vars.AWS_TEST_SUBNET_ID }}
+      AWS_KEY_NAME: ${{ vars.AWS_TEST_KEY_NAME }}
+      AWS_SSH_CIDR: ${{ vars.AWS_TEST_SSH_CIDR }}
+      AWS_INSTANCE_TYPE: ${{ matrix.arch == 'arm64' && vars.AWS_TEST_INSTANCE_TYPE_ARM64 || vars.AWS_TEST_INSTANCE_TYPE_AMD64 }}
+      AWS_TEST_PREFIX: ansible-regolith-remote
+      AWS_PROJECT_TAG: ansible-role-regolith
+      AWS_INVENTORY_TEMPLATE: tests/remote/inventories/aws-ephemeral-template.yml
+    steps:
+      - name: Configure ephemeral file paths
+        run: |
+          {
+            echo "AWS_SSH_PRIVATE_KEY_PATH=${RUNNER_TEMP}/aws-test.key"
+            echo "AWS_STATE_FILE=${RUNNER_TEMP}/aws-remote-state-${{ matrix.os_version }}-${{ matrix.arch }}.json"
+            echo "AWS_INVENTORY_FILE=${RUNNER_TEMP}/aws-remote-inventory-${{ matrix.os_version }}-${{ matrix.arch }}.yml"
+            echo "AWS_METADATA_FILE=${RUNNER_TEMP}/aws-remote-metadata-${{ matrix.os_version }}-${{ matrix.arch }}.json"
+            echo "AWS_CLEANUP_STATUS_FILE=${RUNNER_TEMP}/aws-remote-cleanup-${{ matrix.os_version }}-${{ matrix.arch }}.json"
+          } >> "$GITHUB_ENV"
+
+      - name: Validate required repository configuration
+        run: |
+          missing=0
+          for var_name in AWS_REGION AWS_SUBNET_ID AWS_KEY_NAME; do
+            value="${!var_name:-}"
+            if [ -z "$value" ]; then
+              echo "Missing required variable: $var_name"
+              missing=1
+            fi
+          done
+          if [ -z "${{ vars.AWS_TEST_ROLE_ARN }}" ]; then
+            echo "Missing required variable: AWS_TEST_ROLE_ARN"
+            missing=1
+          fi
+          if [ -z "${{ secrets.AWS_TEST_SSH_PRIVATE_KEY }}" ]; then
+            echo "Missing required secret: AWS_TEST_SSH_PRIVATE_KEY"
+            missing=1
+          fi
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_TEST_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: ansible-regolith-aws-tests
+
+      - name: Setup Ansible test environment
+        uses: ./.github/actions/setup-ansible-test
+
+      - name: Prepare SSH credentials
+        run: |
+          umask 077
+          printf '%s\n' "${{ secrets.AWS_TEST_SSH_PRIVATE_KEY }}" > "${AWS_SSH_PRIVATE_KEY_PATH}"
+          chmod 600 "${AWS_SSH_PRIVATE_KEY_PATH}"
+
+      - name: Run remote test harness
+        env:
+          REMOTE_CREATE_COMMAND: tests/remote/aws/create-ephemeral-env.sh
+          REMOTE_RESET_COMMAND: tests/remote/aws/destroy-ephemeral-env.sh
+        run: |
+          args=(--inventory "${AWS_INVENTORY_FILE}" --scenario "${AWS_TEST_SCENARIO}")
+          if [ "${{ needs.prepare-matrix.outputs.skip_transitions }}" = "true" ]; then
+            args+=(--skip-transitions)
+          fi
+          tests/remote/run.sh "${args[@]}"
+
+      - name: Ensure cleanup executes on failures
+        if: always()
+        run: tests/remote/aws/destroy-ephemeral-env.sh
+
+      - name: Verify AWS cleanup status
+        if: always()
+        run: tests/remote/aws/verify-cleanup.sh

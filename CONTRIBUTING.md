@@ -30,6 +30,9 @@ Breaking changes must include `BREAKING CHANGE:` in the commit body or use the `
 ```bash
 pre-commit run --all-files
 bash tests/validate-release-workflows.sh
+python -m pip install pyyaml
+python -m unittest discover -s tests/unit -p 'test_*.py'
+python scripts/validate-role-defaults.py
 ansible-playbook molecule/unit/converge.yml
 ```
 

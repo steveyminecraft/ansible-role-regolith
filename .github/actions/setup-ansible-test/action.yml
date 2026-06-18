@@ -39,4 +39,7 @@ runs:
         fi
         "${{ github.workspace }}/.ci-venv/bin/pip" install \
           -r "${{ inputs.requirements-file }}"
+        mkdir -p "${{ github.workspace }}/.ansible/collections"
+        "${{ github.workspace }}/.ci-venv/bin/ansible-galaxy" collection install ansible.posix \
+          -p "${{ github.workspace }}/.ansible/collections"
         echo "${{ github.workspace }}/.ci-venv/bin" >> "${GITHUB_PATH}"

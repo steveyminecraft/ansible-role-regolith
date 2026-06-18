@@ -38,8 +38,8 @@
   ansible.builtin.assert:
     that:
       - regolith_validation_failed
-      - test_case.expected_message in regolith_validation_failure_msg
+      - regolith_validation_failure_msg | regex_search(test_case.expected_message) is not none
     fail_msg: >-
       Validation case {{ test_case.name }} did not fail as expected.
-      Expected message fragment: {{ test_case.expected_message }}
+      Expected message pattern: {{ test_case.expected_message }}
       Actual message: {{ regolith_validation_failure_msg | default('none') }}

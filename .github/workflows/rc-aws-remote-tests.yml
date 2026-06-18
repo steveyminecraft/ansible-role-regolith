@@ -1,0 +1,112 @@
+---
+name: AWS RC remote tests
+
+on:
+  push:
+    tags:
+      - "v*-rc*"
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "Regolith deployment to bootstrap and verify on ephemeral EC2"
+        type: choice
+        required: true
+        default: regolith-stable
+        options:
+          - regolith-stable
+          - regolith-main
+          - regolith-preview
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: aws-rc-remote-tests-${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  aws-rc-remote-tests:
+    name: AWS integration — Regolith on Ubuntu 24.04 (RC)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      AWS_REGION: ${{ vars.AWS_TEST_REGION }}
+      AWS_TEST_SCENARIO: ${{ github.event.inputs.scenario || 'regolith-stable' }}
+      AWS_OS_FAMILY: ubuntu
+      AWS_OS_VERSION: "24.04"
+      AWS_ARCH: amd64
+      AWS_SUBNET_ID: ${{ vars.AWS_TEST_SUBNET_ID }}
+      AWS_KEY_NAME: ${{ vars.AWS_TEST_KEY_NAME }}
+      AWS_SSH_CIDR: ${{ vars.AWS_TEST_SSH_CIDR || '0.0.0.0/0' }}
+      AWS_INSTANCE_TYPE: ${{ vars.AWS_TEST_INSTANCE_TYPE_AMD64 }}
+      AWS_TEST_PREFIX: ansible-regolith-rc
+      AWS_PROJECT_TAG: ansible-role-regolith
+      AWS_INVENTORY_TEMPLATE: tests/remote/inventories/aws-ephemeral-template.yml
+    steps:
+      - name: Configure ephemeral file paths
+        run: |
+          {
+            echo "AWS_SSH_PRIVATE_KEY_PATH=${RUNNER_TEMP}/aws-test.key"
+            echo "AWS_STATE_FILE=${RUNNER_TEMP}/aws-rc-state.json"
+            echo "AWS_INVENTORY_FILE=${RUNNER_TEMP}/aws-rc-inventory.yml"
+            echo "AWS_METADATA_FILE=${RUNNER_TEMP}/aws-rc-metadata.json"
+            echo "AWS_CLEANUP_STATUS_FILE=${RUNNER_TEMP}/aws-rc-cleanup.json"
+          } >> "$GITHUB_ENV"
+
+      - name: Validate repository configuration
+        run: |
+          missing=0
+          for var_name in AWS_REGION AWS_SUBNET_ID AWS_KEY_NAME AWS_INSTANCE_TYPE; do
+            if [ -z "${!var_name:-}" ]; then
+              echo "Missing required variable: $var_name"
+              missing=1
+            fi
+          done
+          if [ -z "${{ vars.AWS_TEST_ROLE_ARN }}" ]; then
+            echo "Missing required variable: AWS_TEST_ROLE_ARN"
+            missing=1
+          fi
+          if [ -z "${{ secrets.AWS_TEST_SSH_PRIVATE_KEY }}" ]; then
+            echo "Missing required secret: AWS_TEST_SSH_PRIVATE_KEY"
+            missing=1
+          fi
+          [ "$missing" -eq 0 ]
+
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_TEST_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: ansible-regolith-rc-ubuntu-24.04
+
+      - name: Setup Ansible test environment
+        uses: ./.github/actions/setup-ansible-test
+
+      - name: Prepare SSH credentials
+        run: |
+          umask 077
+          printf '%s\n' "${{ secrets.AWS_TEST_SSH_PRIVATE_KEY }}" > "${AWS_SSH_PRIVATE_KEY_PATH}"
+          chmod 600 "${AWS_SSH_PRIVATE_KEY_PATH}"
+
+      - name: Run remote test harness
+        env:
+          REMOTE_CREATE_COMMAND: tests/remote/aws/create-ephemeral-env.sh
+          REMOTE_RESET_COMMAND: tests/remote/aws/destroy-ephemeral-env.sh
+        run: |
+          tests/remote/run.sh \
+            --inventory "${AWS_INVENTORY_FILE}" \
+            --scenario "${AWS_TEST_SCENARIO}"
+
+      - name: Ensure cleanup executes on failures
+        if: always()
+        run: tests/remote/aws/destroy-ephemeral-env.sh
+
+      - name: Verify AWS cleanup status
+        if: always()
+        run: tests/remote/aws/verify-cleanup.sh
