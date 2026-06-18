@@ -122,6 +122,11 @@ def main() -> int:
         default="",
         help="Write matrix JSON payload to this file for the workflow step to publish",
     )
+    parser.add_argument(
+        "--meta-file",
+        default="",
+        help="Write git_ref/head_sha metadata JSON when using --matrix-file",
+    )
     args = parser.parse_args()
 
     token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
@@ -172,18 +177,28 @@ def main() -> int:
     for entry in matrix:
         print(f"  - {entry['label']}")
 
-    if args.github_output:
+    matrix_json = json.dumps(payload)
+    if args.matrix_file:
+        Path(args.matrix_file).write_text(matrix_json, encoding="utf-8")
+        if args.meta_file:
+            Path(args.meta_file).write_text(
+                json.dumps(
+                    {
+                        "git_ref": git_ref,
+                        "head_sha": head_sha,
+                        "has_matrix": has_matrix,
+                        "integration_run_id": str(workflow_run_id),
+                    }
+                ),
+                encoding="utf-8",
+            )
+    elif args.github_output:
         output_path = Path(args.github_output)
         write_github_output(output_path, "has_matrix", has_matrix)
         write_github_output(output_path, "git_ref", git_ref)
         write_github_output(output_path, "head_sha", head_sha)
         write_github_output(output_path, "integration_run_id", str(workflow_run_id))
-
-    matrix_json = json.dumps(payload)
-    if args.matrix_file:
-        Path(args.matrix_file).write_text(matrix_json, encoding="utf-8")
-    elif args.github_output:
-        write_github_output(Path(args.github_output), "matrix", matrix_json)
+        write_github_output(output_path, "matrix", matrix_json)
     else:
         print(json.dumps({"matrix": payload, "git_ref": git_ref, "has_matrix": has_matrix}, indent=2))
 
