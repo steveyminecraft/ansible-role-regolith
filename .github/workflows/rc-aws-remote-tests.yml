@@ -109,13 +109,10 @@ jobs:
           set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_run" ] && \
              [ "${{ steps.release_gate.outputs.is_release_pr }}" != "true" ]; then
-            python3 - <<'PY' >> "$GITHUB_OUTPUT"
-import os
-print('matrix={"include":[]}')
-print('git_ref=')
-print('has_matrix=false')
-print(f"scenario={os.environ['INPUT_SCENARIO']}")
-PY
+            echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
+            echo "git_ref=" >> "$GITHUB_OUTPUT"
+            echo "has_matrix=false" >> "$GITHUB_OUTPUT"
+            echo "scenario=${INPUT_SCENARIO}" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           args=(--matrix-file "${MATRIX_FILE}" --meta-file "${META_FILE}")
