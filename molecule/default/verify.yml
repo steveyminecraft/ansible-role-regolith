@@ -1,6 +1,7 @@
 ---
 - name: Verify Regolith installation
   hosts: all
+  become: true
   gather_facts: true
   tasks:
     - name: Collect package facts
