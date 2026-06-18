@@ -1,5 +1,5 @@
 ---
-name: CI — Regolith: AWS EC2 (PR gate)
+name: "CI — Regolith: AWS EC2 (PR gate)"
 
 on:
   workflow_call:

@@ -3,7 +3,7 @@
 # first-time contributor on public repos. CI workflows then sit in
 # action_required until a maintainer clicks "Approve workflows to run".
 # Rerun those runs under a trusted PAT when RELEASE_PLEASE_TOKEN is configured.
-name: Release — Regolith: unblock release PR CI
+name: "Release — Regolith: unblock release PR CI"
 
 on:
   pull_request_target:

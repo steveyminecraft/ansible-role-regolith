@@ -1,5 +1,5 @@
 ---
-name: Release — Regolith: version bump
+name: "Release — Regolith: version bump"
 
 on:  # yamllint disable-line rule:truthy
   push:
