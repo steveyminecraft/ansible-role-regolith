@@ -101,3 +101,23 @@ jobs:
 
       - name: Run integration test
         uses: ./.github/actions/run-integration-test
+
+  aws-rc-remote-tests:
+    name: AWS RC remote tests
+    needs:
+      - prerequisites
+      - integration
+    if: >-
+      github.event_name == 'pull_request' &&
+      startsWith(github.event.pull_request.head.ref, 'release-please--branches--') &&
+      needs.integration.result == 'success'
+    uses: ./.github/workflows/rc-aws-remote-tests.yml
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    secrets: inherit
+    with:
+      git_ref: ${{ needs.prerequisites.outputs.head_sha }}
+      integration_workflow_run_id: ${{ github.run_id }}
+      require_rc_tag: false

@@ -51,6 +51,10 @@ on:
         type: boolean
         required: true
         default: false
+      integration_workflow_run_id:
+        description: "Integration tests workflow run id (manual recovery)"
+        required: false
+        default: ""
 
 permissions:
   actions: read
@@ -117,7 +121,7 @@ jobs:
           INPUT_GIT_REF: ${{ inputs.git_ref || github.event.inputs.git_ref || github.ref_name }}
           INPUT_SCENARIO: ${{ inputs.scenario || github.event.inputs.scenario || 'regolith-stable' }}
           INPUT_REQUIRE_RC_TAG: ${{ inputs.require_rc_tag || github.event.inputs.require_rc_tag || 'false' }}
-          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id || inputs.integration_workflow_run_id || '' }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id || inputs.integration_workflow_run_id || github.event.inputs.integration_workflow_run_id || '' }}
         run: |
           set -euo pipefail
           args=()

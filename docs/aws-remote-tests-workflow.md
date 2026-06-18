@@ -35,7 +35,9 @@ On every PR and `main` push:
 
 1. **Unit tests** (`lint` → `policy` → `unit` → `validate`) and **Trivy** run in parallel.
 2. When Unit tests complete, **Integration tests** start and wait until Trivy has also passed.
-3. On the Release Please PR only: when integration completes, `rc-aws-remote-tests.yml` starts via `workflow_run`.
+3. On the Release Please PR only: when integration completes, `rc-aws-remote-tests.yml` starts
+   via a `workflow_call` from the integration workflow (`workflow_run` alone is unreliable for
+   `pull_request` triggers).
 
 When Release Please opens or updates a release PR on `main`:
 
