@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.7.1](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.7.0...v3.7.1) (2026-06-18)
+
+
+### Bug Fixes
+
+* checkout repo before AWS prepare-matrix script runs ([612df67](https://github.com/steveyminecraft/ansible-role-regolith/commit/612df675854742038ce38cf7eb73c790a91bbb23))
+
 ## [3.7.0](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.6.0...v3.7.0) (2026-06-18)
 
 
