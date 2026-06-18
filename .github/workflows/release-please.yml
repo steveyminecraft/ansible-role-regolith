@@ -88,19 +88,6 @@ jobs:
           echo "tag=${rc_tag}" >> "$GITHUB_OUTPUT"
           echo "pushed=true" >> "$GITHUB_OUTPUT"
 
-  aws-rc-remote-tests:
-    name: AWS RC remote tests
-    needs: tag-release-candidate
-    if: needs.tag-release-candidate.outputs.rc_pushed == 'true'
-    permissions:
-      contents: read
-      id-token: write
-    uses: ./.github/workflows/rc-aws-remote-tests.yml
-    with:
-      git_ref: ${{ needs.tag-release-candidate.outputs.rc_tag }}
-      scenario: regolith-stable
-    secrets: inherit
-
   publish-galaxy:
     name: Publish Galaxy
     runs-on: ubuntu-24.04

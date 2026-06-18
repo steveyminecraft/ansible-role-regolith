@@ -194,7 +194,7 @@ GitHub Actions workflows:
 |----------|---------|----------------|
 | [Unit tests](.github/workflows/unit-tests.yml) | PR, push to `main`, manual | pre-commit; policy scripts; `ansible-playbook` unit matrix; Galaxy metadata validation |
 | [Integration tests](.github/workflows/integration-tests.yml) | PR, push to `main`, daily cron, manual | Native container jobs (Debian bookworm/trixie, Ubuntu jammy/noble/plucky/questing) |
-| [AWS RC remote tests](.github/workflows/rc-aws-remote-tests.yml) | `v*-rc*` tags, **auto from Release Please**, manual | Ephemeral EC2 apply + verify + teardown |
+| [AWS RC remote tests](.github/workflows/rc-aws-remote-tests.yml) | `v*-rc*` tags, **after integration passes (per platform)**, manual | Ephemeral EC2 per successful integration platform |
 | [AWS remote tests](.github/workflows/aws-remote-tests.yml) | Manual | On-demand ephemeral EC2 matrix |
 | [Check Regolith stable pin (docs)](.github/workflows/check-regolith-stable.yml) | Daily cron, manual | Compares `defaults/main.yml` pinned component with the latest stable release listed on Regolith docs, opens a drift issue, and fails on mismatch |
 | [Release Please](.github/workflows/release-please.yml) | Push to `main`, manual | Release PR, RC tags for AWS tests, Galaxy import on release |

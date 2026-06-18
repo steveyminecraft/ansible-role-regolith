@@ -7,7 +7,7 @@ assume AWS role → launch ephemeral EC2 → apply role → verify → destroy.
 
 | Workflow | Trigger | Default target |
 |----------|---------|----------------|
-| `rc-aws-remote-tests.yml` | `v*-rc*` tags, **auto from Release Please**, manual | Ubuntu 24.04 amd64, `regolith-stable` |
+| `rc-aws-remote-tests.yml` | `v*-rc*` tags, **after integration passes (per platform)**, manual | One AWS job per successful integration platform |
 | `aws-remote-tests.yml` | Manual dispatch | Configurable OS/arch/scenario |
 
 ## Required GitHub configuration
@@ -34,11 +34,12 @@ Repository secrets:
 When Release Please opens or updates a release PR on `main`:
 
 1. `tag-release-candidate` pushes `vX.Y.Z-rc.N` on the release PR branch.
-2. `aws-rc-remote-tests` runs immediately via `workflow_call` (does not rely on tag-push
-   workflow triggers, which `GITHUB_TOKEN` cannot fire).
+2. Integration tests run on the release PR (six container platforms).
+3. When integration completes on the release PR branch, `rc-aws-remote-tests.yml` starts via `workflow_run`.
+4. Only platforms whose integration job **passed** receive a matching AWS ephemeral EC2 test.
+   Failed integration platforms are skipped automatically.
 
-RC tags still trigger `rc-aws-remote-tests.yml` when pushed with a PAT (for example after
-configuring `RELEASE_PLEASE_TOKEN`).
+`v*-rc*` tag pushes still trigger the same workflow (with RC-tag gating) when using a PAT.
 
 ## OIDC trust
 

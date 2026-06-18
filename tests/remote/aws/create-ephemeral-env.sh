@@ -14,6 +14,7 @@ required_vars=(
   AWS_STATE_FILE
   AWS_METADATA_FILE
   AWS_INVENTORY_TEMPLATE
+  AWS_ANSIBLE_USER
 )
 
 for var_name in "${required_vars[@]}"; do
@@ -45,20 +46,37 @@ resolve_ubuntu_ami() {
     --output text
 }
 
-if [[ "${AWS_OS_FAMILY}" != "ubuntu" ]]; then
-  echo "Unsupported AWS_OS_FAMILY: ${AWS_OS_FAMILY} (only ubuntu is supported for AWS remote tests)" >&2
-  exit 2
-fi
+resolve_debian_ami() {
+  local codename="${1:-bookworm}"
+  local arch="${2:-amd64}"
+  aws ssm get-parameter \
+    --region "${AWS_REGION}" \
+    --name "/aws/service/debian/release/${codename}/latest/${arch}/hvm/ebs-gp3/ami-id" \
+    --query 'Parameter.Value' \
+    --output text
+}
 
-ubuntu_version="${AWS_OS_VERSION:-24.04}"
-ami_id="$(resolve_ubuntu_ami "${ubuntu_version}" "${arch_suffix}")"
+case "${AWS_OS_FAMILY}" in
+  ubuntu)
+    ubuntu_version="${AWS_OS_VERSION:-24.04}"
+    ami_id="$(resolve_ubuntu_ami "${ubuntu_version}" "${arch_suffix}")"
+    ;;
+  debian)
+    debian_codename="${AWS_OS_CODENAME:-bookworm}"
+    ami_id="$(resolve_debian_ami "${debian_codename}" "${arch_suffix}")"
+    ;;
+  *)
+    echo "Unsupported AWS_OS_FAMILY: ${AWS_OS_FAMILY}" >&2
+    exit 2
+    ;;
+esac
 
 if [[ -z "${ami_id}" || "${ami_id}" == "None" ]]; then
-  echo "Unable to resolve AMI for ${AWS_OS_FAMILY} ${AWS_OS_VERSION:-default} (${arch_suffix})." >&2
+  echo "Unable to resolve AMI for ${AWS_OS_FAMILY} ${AWS_OS_VERSION:-${AWS_OS_CODENAME:-default}} (${arch_suffix})." >&2
   exit 2
 fi
 
-echo "Selected AMI ${ami_id} for ${AWS_OS_FAMILY} ${AWS_OS_VERSION:-default} (${arch_suffix})"
+echo "Selected AMI ${ami_id} for ${AWS_OS_FAMILY} ${AWS_OS_VERSION:-${AWS_OS_CODENAME:-default}} (${arch_suffix})"
 
 name_suffix="$(date +%s)-${RANDOM}"
 name_prefix="${AWS_TEST_PREFIX:-ansible-regolith-remote}"
@@ -150,6 +168,8 @@ cat > "${AWS_METADATA_FILE}" <<EOF
   "region": "${AWS_REGION}",
   "os_family": "${AWS_OS_FAMILY}",
   "os_version": "${AWS_OS_VERSION:-}",
+  "os_codename": "${AWS_OS_CODENAME:-}",
+  "ansible_user": "${AWS_ANSIBLE_USER}",
   "arch": "${AWS_ARCH}",
   "instance_ids": ["${instance_id}"],
   "public_ips": ["${public_ip}"],
@@ -170,6 +190,7 @@ content = inventory_path.read_text(encoding="utf-8")
 replacements = {
     "REPLACE_PUBLIC_IP": os.environ["PUBLIC_IP"],
     "REPLACE_SSH_KEY_PATH": os.environ["AWS_SSH_PRIVATE_KEY_PATH"],
+    "REPLACE_ANSIBLE_USER": os.environ["AWS_ANSIBLE_USER"],
 }
 for old, new in replacements.items():
     content = content.replace(old, new)

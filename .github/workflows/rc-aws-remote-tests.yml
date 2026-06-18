@@ -2,6 +2,11 @@
 name: AWS RC remote tests
 
 on:
+  workflow_run:
+    workflows:
+      - Integration tests
+    types:
+      - completed
   workflow_call:
     inputs:
       git_ref:
@@ -13,6 +18,16 @@ on:
         required: false
         type: string
         default: regolith-stable
+      integration_workflow_run_id:
+        description: Integration tests workflow run id (optional)
+        required: false
+        type: string
+        default: ""
+      require_rc_tag:
+        description: Skip AWS tests unless an RC tag points at the commit
+        required: false
+        type: boolean
+        default: true
   push:
     tags:
       - "v*-rc*"
@@ -27,26 +42,89 @@ on:
           - regolith-stable
           - regolith-main
           - regolith-preview
+      git_ref:
+        description: "Optional git ref override (defaults to latest RC tag workflow context)"
+        required: false
+        default: ""
+      require_rc_tag:
+        description: "Require an RC tag on the commit before running AWS tests"
+        type: boolean
+        required: true
+        default: false
 
 permissions:
+  actions: read
   contents: read
   id-token: write
 
 concurrency:
-  group: aws-rc-remote-tests-${{ github.workflow }}-${{ inputs.git_ref || github.ref_name }}
-  cancel-in-progress: true
+  group: aws-rc-remote-tests-${{ github.workflow }}-${{ github.event.workflow_run.id || inputs.git_ref || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
+  prepare-matrix:
+    name: Prepare AWS matrix from integration results
+    if: >-
+      github.event_name == 'workflow_call' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
+      (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion != 'cancelled' &&
+        startsWith(github.event.workflow_run.head_branch, 'release-please--branches--')
+      )
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      git_ref: ${{ steps.matrix.outputs.git_ref }}
+      has_matrix: ${{ steps.matrix.outputs.has_matrix }}
+      scenario: ${{ steps.matrix.outputs.scenario }}
+    steps:
+      - name: Resolve AWS matrix from integration jobs
+        id: matrix
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_GIT_REF: ${{ inputs.git_ref || github.event.inputs.git_ref || github.ref_name }}
+          INPUT_SCENARIO: ${{ inputs.scenario || github.event.inputs.scenario || 'regolith-stable' }}
+          INPUT_REQUIRE_RC_TAG: ${{ inputs.require_rc_tag || github.event.inputs.require_rc_tag || 'false' }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id || inputs.integration_workflow_run_id || '' }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            args+=(--workflow-run-id "${WORKFLOW_RUN_ID}")
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            args+=(--git-ref "${INPUT_GIT_REF}" --require-rc-tag)
+          else
+            if [ -n "${WORKFLOW_RUN_ID}" ]; then
+              args+=(--workflow-run-id "${WORKFLOW_RUN_ID}")
+            elif [ -n "${INPUT_GIT_REF}" ]; then
+              args+=(--git-ref "${INPUT_GIT_REF}")
+            fi
+            if [ "${INPUT_REQUIRE_RC_TAG}" = "true" ]; then
+              args+=(--require-rc-tag)
+            fi
+          fi
+          python3 scripts/prepare-aws-matrix-from-integration.py "${args[@]}"
+          echo "scenario=${INPUT_SCENARIO}" >> "$GITHUB_OUTPUT"
+
   aws-rc-remote-tests:
-    name: AWS integration — Regolith on Ubuntu 24.04 (RC)
+    name: ${{ matrix.label }}
+    needs: prepare-matrix
+    if: needs.prepare-matrix.outputs.has_matrix == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
     env:
       AWS_REGION: ${{ vars.AWS_TEST_REGION }}
-      AWS_TEST_SCENARIO: ${{ inputs.scenario || github.event.inputs.scenario || 'regolith-stable' }}
-      AWS_OS_FAMILY: ubuntu
-      AWS_OS_VERSION: "24.04"
-      AWS_ARCH: amd64
+      AWS_TEST_SCENARIO: ${{ needs.prepare-matrix.outputs.scenario }}
+      AWS_OS_FAMILY: ${{ matrix.os_family }}
+      AWS_OS_VERSION: ${{ matrix.os_version }}
+      AWS_OS_CODENAME: ${{ matrix.os_codename }}
+      AWS_ARCH: ${{ matrix.arch }}
+      AWS_ANSIBLE_USER: ${{ matrix.ansible_user }}
       AWS_SUBNET_ID: ${{ vars.AWS_TEST_SUBNET_ID }}
       AWS_KEY_NAME: ${{ vars.AWS_TEST_KEY_NAME }}
       AWS_SSH_CIDR: ${{ vars.AWS_TEST_SSH_CIDR || '0.0.0.0/0' }}
@@ -59,16 +137,16 @@ jobs:
         run: |
           {
             echo "AWS_SSH_PRIVATE_KEY_PATH=${RUNNER_TEMP}/aws-test.key"
-            echo "AWS_STATE_FILE=${RUNNER_TEMP}/aws-rc-state.json"
-            echo "AWS_INVENTORY_FILE=${RUNNER_TEMP}/aws-rc-inventory.yml"
-            echo "AWS_METADATA_FILE=${RUNNER_TEMP}/aws-rc-metadata.json"
-            echo "AWS_CLEANUP_STATUS_FILE=${RUNNER_TEMP}/aws-rc-cleanup.json"
+            echo "AWS_STATE_FILE=${RUNNER_TEMP}/aws-rc-state-${{ matrix.platform_id }}.json"
+            echo "AWS_INVENTORY_FILE=${RUNNER_TEMP}/aws-rc-inventory-${{ matrix.platform_id }}.yml"
+            echo "AWS_METADATA_FILE=${RUNNER_TEMP}/aws-rc-metadata-${{ matrix.platform_id }}.json"
+            echo "AWS_CLEANUP_STATUS_FILE=${RUNNER_TEMP}/aws-rc-cleanup-${{ matrix.platform_id }}.json"
           } >> "$GITHUB_ENV"
 
       - name: Validate repository configuration
         run: |
           missing=0
-          for var_name in AWS_REGION AWS_SUBNET_ID AWS_KEY_NAME AWS_INSTANCE_TYPE; do
+          for var_name in AWS_REGION AWS_SUBNET_ID AWS_KEY_NAME AWS_INSTANCE_TYPE AWS_ANSIBLE_USER; do
             if [ -z "${!var_name:-}" ]; then
               echo "Missing required variable: $var_name"
               missing=1
@@ -87,14 +165,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.git_ref || github.ref_name }}
+          ref: ${{ needs.prepare-matrix.outputs.git_ref }}
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_TEST_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-          role-session-name: ansible-regolith-rc-ubuntu-24.04
+          role-session-name: ansible-regolith-rc-${{ matrix.platform_id }}
 
       - name: Setup Ansible test environment
         uses: ./.github/actions/setup-ansible-test
