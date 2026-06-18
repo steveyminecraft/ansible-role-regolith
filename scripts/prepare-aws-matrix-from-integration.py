@@ -117,6 +117,11 @@ def main() -> int:
     parser.add_argument("--git-ref", default="")
     parser.add_argument("--require-rc-tag", action="store_true")
     parser.add_argument("--github-output", default=os.environ.get("GITHUB_OUTPUT", ""))
+    parser.add_argument(
+        "--matrix-file",
+        default="",
+        help="Write matrix JSON payload to this file for the workflow step to publish",
+    )
     args = parser.parse_args()
 
     token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
@@ -173,7 +178,12 @@ def main() -> int:
         write_github_output(output_path, "git_ref", git_ref)
         write_github_output(output_path, "head_sha", head_sha)
         write_github_output(output_path, "integration_run_id", str(workflow_run_id))
-        write_github_output(output_path, "matrix", json.dumps(payload))
+
+    matrix_json = json.dumps(payload)
+    if args.matrix_file:
+        Path(args.matrix_file).write_text(matrix_json, encoding="utf-8")
+    elif args.github_output:
+        write_github_output(Path(args.github_output), "matrix", matrix_json)
     else:
         print(json.dumps({"matrix": payload, "git_ref": git_ref, "has_matrix": has_matrix}, indent=2))
 
