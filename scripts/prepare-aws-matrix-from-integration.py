@@ -102,7 +102,11 @@ def commit_has_rc_tag(repo: str, head_sha: str, token: str) -> bool:
 
 def write_github_output(path: Path, key: str, value: str) -> None:
     with path.open("a", encoding="utf-8") as handle:
-        handle.write(f"{key}={value}\n")
+        if "\n" in value or len(value) > 256:
+            delimiter = f"{key}_DELIM"
+            handle.write(f"{key}<<{delimiter}\n{value}\n{delimiter}\n")
+        else:
+            handle.write(f"{key}={value}\n")
 
 
 def main() -> int:
@@ -165,11 +169,11 @@ def main() -> int:
 
     if args.github_output:
         output_path = Path(args.github_output)
-        write_github_output(output_path, "matrix", json.dumps(payload))
+        write_github_output(output_path, "has_matrix", has_matrix)
         write_github_output(output_path, "git_ref", git_ref)
         write_github_output(output_path, "head_sha", head_sha)
-        write_github_output(output_path, "has_matrix", has_matrix)
         write_github_output(output_path, "integration_run_id", str(workflow_run_id))
+        write_github_output(output_path, "matrix", json.dumps(payload))
     else:
         print(json.dumps({"matrix": payload, "git_ref": git_ref, "has_matrix": has_matrix}, indent=2))
 
