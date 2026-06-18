@@ -62,16 +62,43 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  gate:
+    name: Detect Release Please integration completion
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    outputs:
+      is_release_pr: ${{ steps.detect.outputs.is_release_pr }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Resolve triggering integration run
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/detect_release_pr_integration.py \
+            --workflow-run-id "${{ github.event.workflow_run.id }}"
+
   prepare-matrix:
     name: Prepare AWS matrix from integration results
+    needs: gate
     if: >-
-      github.event_name == 'workflow_call' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' ||
+      always() &&
       (
-        github.event_name == 'workflow_run' &&
-        github.event.workflow_run.conclusion == 'success' &&
-        startsWith(github.event.workflow_run.head_branch, 'release-please--branches--')
+        github.event_name == 'workflow_call' ||
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'push' ||
+        (
+          github.event_name == 'workflow_run' &&
+          needs.gate.outputs.is_release_pr == 'true'
+        )
+      ) &&
+      (
+        needs.gate.result == 'success' ||
+        needs.gate.result == 'skipped'
       )
     runs-on: ubuntu-24.04
     outputs:
