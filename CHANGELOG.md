@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.8.1](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.8.0...v3.8.1) (2026-06-19)
+
+
+### Bug Fixes
+
+* **ci:** align manual AWS remote tests with platform catalog ([#42](https://github.com/steveyminecraft/ansible-role-regolith/issues/42)) ([45ec867](https://github.com/steveyminecraft/ansible-role-regolith/commit/45ec8674ab382769cfeccea5527dc8c367312a61))
+
 ## [3.8.0](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.7.1...v3.8.0) (2026-06-18)
 
 
