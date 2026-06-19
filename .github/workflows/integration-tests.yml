@@ -109,15 +109,55 @@ jobs:
       - name: Run integration test
         uses: ./.github/actions/run-integration-test
 
-  aws-pr-remote-tests:
-    name: AWS EC2 remote tests
+  aws-gate:
+    name: AWS pre-merge gate
     needs:
       - prerequisites
       - integration
     if: >-
       github.event_name == 'pull_request' &&
-      !startsWith(github.event.pull_request.head.ref, 'release-please--branches--') &&
       needs.integration.result == 'success'
+    runs-on: ubuntu-24.04
+    outputs:
+      run_aws: ${{ steps.gate.outputs.run_aws }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.prerequisites.outputs.head_sha }}
+
+      - name: Decide whether AWS remote tests should run
+        id: gate
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ needs.prerequisites.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          git fetch origin main --no-tags --depth=1
+          if python3 scripts/should_run_aws_pr_tests.py \
+            --event-name "${EVENT_NAME}" \
+            --head-ref "${HEAD_REF}" \
+            --head-sha "${HEAD_SHA}"; then
+            echo "run_aws=true" >> "${GITHUB_OUTPUT}"
+          else
+            code=$?
+            if [ "${code}" -ne 3 ]; then
+              exit "${code}"
+            fi
+            echo "run_aws=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+  aws-pr-remote-tests:
+    name: AWS EC2 remote tests
+    needs:
+      - prerequisites
+      - integration
+      - aws-gate
+    if: >-
+      needs.aws-gate.result == 'success' &&
+      needs.aws-gate.outputs.run_aws == 'true'
     uses: ./.github/workflows/rc-aws-remote-tests.yml
     permissions:
       contents: read
