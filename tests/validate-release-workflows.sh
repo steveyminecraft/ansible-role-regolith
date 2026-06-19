@@ -38,6 +38,20 @@ if grep -q 'verify_aws_rc_gate.py' "${release_please}"; then
   fail "release-please workflow must not gate Galaxy publish on AWS RC tests"
 fi
 
+integration="${repo_root}/.github/workflows/integration-tests.yml"
+aws_pr="${repo_root}/.github/workflows/rc-aws-remote-tests.yml"
+
+grep -q 'aws-gate:' "${integration}" \
+  || fail "integration workflow must define an AWS pre-merge gate job"
+grep -q 'should_run_aws_pr_tests.py' "${integration}" \
+  || fail "integration workflow must use should_run_aws_pr_tests.py for AWS gating"
+grep -q 'needs.aws-gate.outputs.run_aws' "${integration}" \
+  || fail "integration workflow must call AWS remote tests only when aws-gate approves"
+
+if grep -qE '^[[:space:]]*workflow_run:' "${aws_pr}"; then
+  fail "AWS PR gate workflow must not trigger on workflow_run (post-merge integration)"
+fi
+
 grep -q 'release-tag:' "${release}" || fail "release workflow must require release-tag input"
 grep -q 'git-reference: \${{ inputs.release-tag }}' "${release}" \
   || fail "release workflow must pass release-tag as git-reference"
