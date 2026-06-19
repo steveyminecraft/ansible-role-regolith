@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import unittest
 
+from scripts.ci_workflow_names import WORKFLOW_INTEGRATION_TESTS
 from scripts.detect_release_pr_integration import is_release_please_integration_run
 
 
@@ -12,7 +13,7 @@ class DetectReleasePrIntegrationTests(unittest.TestCase):
         self.assertTrue(
             is_release_please_integration_run(
                 {
-                    "name": "Integration tests",
+                    "name": WORKFLOW_INTEGRATION_TESTS,
                     "conclusion": "success",
                     "head_branch": "release-please--branches--main",
                     "pull_requests": [],
@@ -24,7 +25,7 @@ class DetectReleasePrIntegrationTests(unittest.TestCase):
         self.assertTrue(
             is_release_please_integration_run(
                 {
-                    "name": "Integration tests",
+                    "name": WORKFLOW_INTEGRATION_TESTS,
                     "conclusion": "success",
                     "head_branch": "main",
                     "pull_requests": [
@@ -38,7 +39,7 @@ class DetectReleasePrIntegrationTests(unittest.TestCase):
         self.assertFalse(
             is_release_please_integration_run(
                 {
-                    "name": "Integration tests",
+                    "name": WORKFLOW_INTEGRATION_TESTS,
                     "conclusion": "success",
                     "head_branch": "main",
                     "pull_requests": [],
@@ -50,7 +51,7 @@ class DetectReleasePrIntegrationTests(unittest.TestCase):
         self.assertFalse(
             is_release_please_integration_run(
                 {
-                    "name": "Integration tests",
+                    "name": WORKFLOW_INTEGRATION_TESTS,
                     "conclusion": "failure",
                     "head_branch": "release-please--branches--main",
                     "pull_requests": [],

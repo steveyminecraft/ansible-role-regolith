@@ -10,6 +10,8 @@ import sys
 import urllib.error
 import urllib.request
 
+from scripts.ci_workflow_names import WORKFLOW_INTEGRATION_TESTS
+
 RELEASE_PLEASE_BRANCH_PREFIX = "release-please--branches--"
 
 
@@ -29,7 +31,7 @@ def github_request(url: str, token: str) -> dict:
 
 
 def is_release_please_integration_run(run: dict) -> bool:
-    if run.get("name") != "Integration tests":
+    if run.get("name") != WORKFLOW_INTEGRATION_TESTS:
         return False
     if run.get("conclusion") != "success":
         return False

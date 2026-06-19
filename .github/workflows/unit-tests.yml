@@ -1,5 +1,5 @@
 ---
-name: Unit tests
+name: "CI — Regolith: lint & unit tests"
 
 on:  # yamllint disable-line rule:truthy
   pull_request:
@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   lint:
-    name: Lint
+    name: Lint & static analysis
     runs-on: ubuntu-24.04
 
     steps:
@@ -43,7 +43,7 @@ jobs:
         run: bash tests/validate-gitignore.sh
 
   policy:
-    name: Policy and script validation
+    name: Python policy checks
     runs-on: ubuntu-24.04
     needs: lint
 
@@ -85,7 +85,7 @@ jobs:
           PY
 
   unit:
-    name: Unit (${{ matrix.label }})
+    name: Unit tests (${{ matrix.label }})
     runs-on: ubuntu-24.04
     needs: policy
     strategy:
@@ -112,7 +112,7 @@ jobs:
           playbook: ${{ matrix.playbook }}
 
   validate:
-    name: Role validation
+    name: Galaxy import validation
     runs-on: ubuntu-24.04
     needs: unit
 

@@ -1,5 +1,5 @@
 ---
-name: AWS PR remote tests
+name: "CI — Regolith: AWS EC2 (PR gate)"
 
 on:
   workflow_call:
@@ -49,7 +49,7 @@ concurrency:
 
 jobs:
   prepare-matrix:
-    name: Prepare AWS matrix from integration results
+    name: Prepare EC2 test matrix
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}

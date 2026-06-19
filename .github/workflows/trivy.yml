@@ -1,5 +1,5 @@
 ---
-name: Security scan
+name: "CI — Regolith: security (Trivy)"
 
 on:  # yamllint disable-line rule:truthy
   pull_request:

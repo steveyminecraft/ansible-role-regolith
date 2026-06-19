@@ -7,9 +7,9 @@ after integration passes, not on the Release Please PR or at Galaxy publish time
 
 ```text
 Feature PR
-  → Unit tests + Trivy
-  → Integration tests
-  → AWS PR remote tests (workflow_call from integration-tests.yml)
+  → CI — Regolith: lint & unit tests + CI — Regolith: security (Trivy)
+  → CI — Regolith: container integration
+  → CI — Regolith: AWS EC2 (PR gate) (workflow_call from integration-tests.yml)
 ```
 
 Release Please PRs skip AWS — the code was already tested before merge to `main`.
@@ -19,7 +19,7 @@ to Galaxy from the release tag with no AWS gate.
 
 ## Workflow
 
-[rc-aws-remote-tests.yml](../.github/workflows/rc-aws-remote-tests.yml) (`AWS PR remote tests`):
+[rc-aws-remote-tests.yml](../.github/workflows/rc-aws-remote-tests.yml) (**CI — Regolith: AWS EC2 (PR gate)**):
 
 - **Trigger:** `workflow_call` from integration tests, or `workflow_dispatch` for manual runs
 - **Matrix:** built by [`scripts/prepare-aws-matrix-from-integration.py`](../scripts/prepare-aws-matrix-from-integration.py) from successful integration job names
@@ -27,12 +27,13 @@ to Galaxy from the release tag with no AWS gate.
 Manual recovery:
 
 ```bash
-gh workflow run "AWS PR remote tests" --ref main \
+gh workflow run "CI — Regolith: AWS EC2 (PR gate)" --ref main \
   -f git_ref=<sha> \
   -f integration_workflow_run_id=<integration-run-id>
 ```
 
-On-demand single-platform testing: [aws-remote-tests.yml](../.github/workflows/aws-remote-tests.yml).
+On-demand platform testing: [aws-remote-tests.yml](../.github/workflows/aws-remote-tests.yml)
+(**CI — Regolith: AWS EC2 (manual)**; `workflow_dispatch`, all supported integration platforms).
 
 ## Prerequisites
 
