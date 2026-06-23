@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.8.3](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.8.2...v3.8.3) (2026-06-23)
+
+
+### Bug Fixes
+
+* harden AWS remote cleanup on provisioning failures ([899a3d2](https://github.com/steveyminecraft/ansible-role-regolith/commit/899a3d2b33c10588e8f4c91d006aad8b393886a8))
+* harden AWS remote cleanup on provisioning failures ([bbe53cf](https://github.com/steveyminecraft/ansible-role-regolith/commit/bbe53cfd9fdc9192642c3d04d40e0f238cd7d25a))
+
 ## [3.8.2](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.8.1...v3.8.2) (2026-06-19)
 
 
