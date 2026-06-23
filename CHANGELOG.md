@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.8.2](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.8.1...v3.8.2) (2026-06-19)
+
+
+### Bug Fixes
+
+* **ci:** gate AWS to pre-merge PRs and harden Galaxy install ([1d0545c](https://github.com/steveyminecraft/ansible-role-regolith/commit/1d0545c60ae8ac13ecda8a2ee4839b7682472cb4))
+* **ci:** gate AWS to pre-merge PRs and harden Galaxy install ([493dec9](https://github.com/steveyminecraft/ansible-role-regolith/commit/493dec9d6ad44ac76a8db5963a5a709dac8da1ae))
+
 ## [3.8.1](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.8.0...v3.8.1) (2026-06-19)
 
 
