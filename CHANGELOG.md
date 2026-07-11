@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.8.4](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.8.3...v3.8.4) (2026-07-11)
+
+
+### Bug Fixes
+
+* satisfy pre-commit on Cursor skill files ([3578b48](https://github.com/steveyminecraft/ansible-role-regolith/commit/3578b4870857652a054a1f73c854a22d7cdeb57f))
+
 ## [3.8.3](https://github.com/steveyminecraft/ansible-role-regolith/compare/v3.8.2...v3.8.3) (2026-06-23)
 
 
