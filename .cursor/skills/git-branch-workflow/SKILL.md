@@ -31,7 +31,7 @@ Do **not** do long-lived development directly on `main` when the change is non-t
 
 2. **Merge direction** (one way):
    - Topic branch → `main` (PR preferred)
-   - Never merge `main` into a topic branch for “latest code” unless resolving a specific conflict—prefer rebasing the topic branch onto `main`.
+   - Never merge `main` into a topic branch for "latest code" unless resolving a specific conflict -- prefer rebasing the topic branch onto `main`.
 
 3. **Before starting work**, always verify local `main` is current:
    ```bash

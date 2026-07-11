@@ -18,7 +18,7 @@ Do not grep the codebase for architecture questions until bootstrap completes or
 
 ## Query before explore
 
-For “how does X work?”, data flow, role/playbook relationships, or cross-file dependencies:
+For "how does X work?", data flow, role/playbook relationships, or cross-file dependencies:
 
 1. `graphify query "<question>"`
 2. `graphify path "<A>" "<B>"` or `graphify explain "<concept>"` when tracing a specific link
