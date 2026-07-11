@@ -100,13 +100,28 @@ Development / Testing
 
 CI uses native GitHub Actions (`ansible-playbook` and container jobs). Locally you can run the same playbooks or use Molecule.
 
-For local autoenv/direnv-style setup, copy the tracked example file to a private local `.env` file and edit any machine-specific values. The `.env` path is listed in `.gitignore` and must not be committed; only [`.env.example`](.env.example) belongs in git.
+### Local Python environment (`.venv`)
+
+Use a virtual environment at **`.venv/`** in the repo root (gitignored). Do not use `env/` or other ad-hoc venv paths.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install pyyaml   # script unit tests and policy checks
+```
+
+CI Actions use a separate `.ci-venv/` under the workspace; locally, stick to `.venv`.
+
+For autoenv/direnv-style activation, copy the tracked example to a private local `.env` file (it sources `.venv/bin/activate`). The `.env` path is listed in `.gitignore` and must not be committed; only [`.env.example`](.env.example) belongs in git.
 
 ```bash
 cp .env.example .env
 ```
 
-Unit tests (repository line generation, no VM):
+With [direnv](https://direnv.net/), `.envrc` loads `.env` when present.
+
+Unit tests (repository line generation, no VM; activate `.venv` first):
 
 ```bash
 ansible-playbook molecule/unit/converge.yml
@@ -114,7 +129,7 @@ ansible-playbook molecule/unit-ubuntu-plucky/converge.yml
 ansible-playbook molecule/unit-ubuntu-questing/converge.yml
 ```
 
-Python policy and script unit tests (see [Unit tests workflow](#unit-tests-workflow) for CI job detail):
+Python policy and script unit tests (with `.venv` activated; see [Unit tests workflow](#unit-tests-workflow) for CI job detail):
 
 ```bash
 python -m pip install pyyaml
@@ -137,7 +152,7 @@ docker run --rm -it -v "$PWD:/work" -w /work python:3.13-bookworm bash -lc '
 '
 ```
 
-Optional Molecule wrappers (local development):
+Optional Molecule wrappers (with `.venv` activated):
 
 ```bash
 pip install -r requirements.txt
@@ -164,7 +179,7 @@ Run the Vagrant scenario with libvirt/KVM:
 VAGRANT_DEFAULT_PROVIDER=libvirt ./scripts/molecule-vagrant test
 ```
 
-Linting and validation:
+Linting and validation (with `.venv` activated):
 
 ```bash
 pre-commit run --all-files
@@ -251,7 +266,7 @@ Runs `galaxy_importer` in **legacy role** mode to ensure the role would pass Ans
 | `test_verify_aws_rc_gate.py` | Legacy Galaxy/AWS RC gate helper (unused by publish workflows) |
 | `test_verify_ci_prerequisites.py` | Integration gate requires successful lint/unit and Trivy workflows |
 
-Run locally:
+Run locally (with `.venv` activated):
 
 ```bash
 python -m pip install pyyaml

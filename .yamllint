@@ -6,7 +6,6 @@ ignore: |
   .cache/
   .ci-venv/
   .env/
-  env/
   venv/
   .github/renovate.json5
   .venv/

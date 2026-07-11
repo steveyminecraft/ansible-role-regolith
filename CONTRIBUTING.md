@@ -25,12 +25,24 @@ Examples of good squash titles:
 
 Breaking changes must include `BREAKING CHANGE:` in the commit body or use the `!` suffix in the type (for example `feat!:`) so Release Please can bump the major version.
 
+## Local setup
+
+Create and activate **`.venv/`** at the repo root (see [README.md](README.md#local-python-environment-venv)):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install pyyaml
+```
+
+Optional: `cp .env.example .env` for direnv/autoenv to activate `.venv` when you `cd` into the repo.
+
 ## Local validation
 
 ```bash
 pre-commit run --all-files
 bash tests/validate-release-workflows.sh
-python -m pip install pyyaml
 python -m unittest discover -s tests/unit -p 'test_*.py'
 python scripts/validate-role-defaults.py
 ansible-playbook molecule/unit/converge.yml
