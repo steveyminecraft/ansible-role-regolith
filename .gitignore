@@ -13,6 +13,10 @@ AGENTS.md
 .editorconfig
 .vscode/
 .codex/
-.cursor/
+.cursor/mcp.json
+
+# graphify knowledge vault (local only — see docs/knowledge-vault.md)
+graphify-out/
+
 env/
 molecule/**/group_vars/

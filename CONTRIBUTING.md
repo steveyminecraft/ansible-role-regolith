@@ -37,3 +37,15 @@ ansible-playbook molecule/unit/converge.yml
 ```
 
 See [README.md](README.md) for Galaxy publication, integration test matrices, and role variable documentation.
+
+## Local knowledge vault (graphify)
+
+Architecture maps and agent context live under `graphify-out/` on your machine only (gitignored).
+
+```bash
+./scripts/setup-knowledge-vault.sh          # fast code graph + HTML/Obsidian export
+./scripts/setup-knowledge-vault.sh --full   # how to run full /graphify . build
+./scripts/install-graphify-hook.sh          # post-commit code graph refresh
+```
+
+See [docs/knowledge-vault.md](docs/knowledge-vault.md).

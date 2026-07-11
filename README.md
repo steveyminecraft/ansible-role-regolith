@@ -367,6 +367,11 @@ Repository key fingerprint enforcement is not enabled because this role does not
 - **OpenSSF Scorecard** workflow for supply-chain posture on the repo.
 - **CodeQL** is low value here (mostly YAML/Ansible); ansible-lint and Trivy cover more of this role.
 
+Further reading
+---------------
+
+- [Knowledge vault (local graphify)](docs/knowledge-vault.md) — optional agent architecture map; `graphify-out/` stays local
+
 License
 -------
 
