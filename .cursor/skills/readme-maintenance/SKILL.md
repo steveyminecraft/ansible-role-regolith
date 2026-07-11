@@ -42,7 +42,7 @@ Skip README edits only if the user explicitly says not to, or the change is pure
 Match existing root `README.md` sections:
 
 - **Role Variables** — defaults in `defaults/main.yml`, supported platforms table
-- **Development / Testing** — unit, integration, Vagrant, lint commands
+- **Development / Testing** — `.venv` setup, unit, integration, Vagrant, lint commands
 - **Test pyramid** and **Unit tests workflow** — CI job names and ordering
 - **Continuous integration (workflow reference)** — workflow table, triggers, AWS vs release path
 - **Ansible Galaxy** — Release Please, tag-based import, `GALAXY_API_KEY`
