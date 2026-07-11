@@ -1,0 +1,4 @@
+# Ansible-role-focused graph: exclude bundled draw.io toolbox (48+ files of
+# JSON schema / script noise that drown out role, molecule, and CI nodes).
+# Obsidian/drawio project skills remain indexed via docs and obsidian-diagrams.
+.cursor/skills/drawio-skill/

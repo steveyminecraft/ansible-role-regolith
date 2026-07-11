@@ -100,6 +100,10 @@ fi
 echo "Building local code graph (graphify update)..."
 graphify update .
 
+echo "Bridging role→molecule edges and deduplicating graph..."
+python3 "$ROOT/scripts/bridge-role-graph.py"
+python3 "$ROOT/scripts/dedupe-graphify-graph.py" --prune-isolated
+
 write_local_index
 
 echo "Exporting HTML..."

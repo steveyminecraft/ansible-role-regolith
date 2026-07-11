@@ -68,7 +68,7 @@ graphify explain "regolith_repository_component"
 |-------------|---------|
 | Python/shell | `graphify update .` (automatic with post-commit hook) |
 | Role tasks, molecule, docs | `/graphify .` or full rebuild |
-| After full rebuild | `python3 scripts/dedupe-graphify-graph.py --prune-isolated` |
+| After full rebuild | `python3 scripts/bridge-role-graph.py` then `python3 scripts/dedupe-graphify-graph.py --prune-isolated` |
 | Re-export Obsidian | `graphify export obsidian` |
 | Re-export HTML | `graphify export html` |
 
@@ -158,3 +158,7 @@ facts → validate → repository_facts → repository → repository_keyring �
 ```
 
 Key surfaces: `tasks/main.yml`, `defaults/main.yml`, `molecule/default/verify.yml`, `tests/remote/playbooks/bootstrap-regolith.yml`.
+
+**Test chain:** `molecule/default/converge.yml` applies the role via `tasks/main.yml`; `molecule/default/verify.yml` asserts the installed packages from `defaults/main.yml` (`regolith_packages`). Docker integration scenarios reuse the same converge/verify playbooks through `molecule/common/converge.yml`.
+
+**Graph scope:** `.graphifyignore` excludes `.cursor/skills/drawio-skill/` so the vault emphasizes Ansible role, Molecule, and CI nodes. Rebuild with `/graphify .` then `python3 scripts/bridge-role-graph.py` and `python3 scripts/dedupe-graphify-graph.py --prune-isolated`.
